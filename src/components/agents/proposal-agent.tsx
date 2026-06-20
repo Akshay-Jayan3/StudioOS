@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { proposalInputSchema, ProposalInput, ProposalOutput } from "@/agents/proposal-agent/schema";
@@ -9,16 +9,69 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Sparkles, Save, Check } from "lucide-react";
 
-export function ProposalAgent() {
+export type ProposalPrefill = Partial<{
+  clientName: string;
+  projectName: string;
+  projectType: string;
+  spaceDetails: string;
+  budget: string;
+  timeline: string;
+  styleDirection: string;
+  keyRequirements: string;
+}>;
+
+function formatForCopy(output: ProposalOutput): string {
+  return `${output.proposalTitle}
+${"=".repeat(40)}
+
+${output.executiveSummary}
+
+PROJECT SCOPE
+${output.projectScope.map((s) => `${s.area}: ${s.description}\n${s.included.map((i) => `  - ${i}`).join("\n")}`).join("\n\n")}
+
+TIMELINE (${output.timeline.totalDuration})
+${output.timeline.phases.map((p) => `${p.phase} (${p.duration}): ${p.milestones.join(", ")}`).join("\n")}
+
+PRICING
+Design Fee: ${output.pricing.designFee.amount} (${output.pricing.designFee.basis})
+Procurement Estimate: ${output.pricing.procurementEstimate}
+Total Estimate: ${output.pricing.totalEstimate}
+
+Payment Schedule:
+${output.pricing.paymentSchedule.map((p) => `${p.milestone}: ${p.percentage}% (${p.amount})`).join("\n")}
+
+EXCLUSIONS
+${output.exclusions.map((e) => `- ${e}`).join("\n")}
+
+TERMS
+${output.terms.map((t) => `- ${t}`).join("\n")}
+
+${output.closingNote}`;
+}
+
+export function ProposalAgent({ prefill }: { prefill?: ProposalPrefill } = {}) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<ProposalOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
+  const [wasPrefilled, setWasPrefilled] = useState(false);
+
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savedProjectName, setSavedProjectName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => setProjects([]));
+  }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { register, handleSubmit } = useForm<any>({
+  const { register, handleSubmit, setValue } = useForm<any>({
     resolver: zodResolver(proposalInputSchema) as any,
     defaultValues: {
       clientName: "Priya Menon",
@@ -33,10 +86,19 @@ export function ProposalAgent() {
     },
   });
 
+  useEffect(() => {
+    if (!prefill) return;
+    Object.entries(prefill).forEach(([key, value]) => {
+      if (value) setValue(key, value);
+    });
+    setWasPrefilled(true);
+  }, [prefill, setValue]);
+
   const onSubmit = async (data: ProposalInput) => {
     setLoading(true);
     setError(null);
     setOutput(null);
+    setSavedProjectName(null);
     try {
       const res = await fetch("/api/agents/proposal", {
         method: "POST",
@@ -54,12 +116,35 @@ export function ProposalAgent() {
     }
   };
 
+  const handleSaveToProject = async () => {
+    if (!selectedProjectId || !output) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/save-proposal`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proposal: output }),
+      });
+      if (res.ok) {
+        const project = projects.find((p) => p.id === selectedProjectId);
+        setSavedProjectName(project?.name || "project");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const status = loading ? "loading" : error ? "error" : output ? "success" : "idle";
 
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* LEFT: Form */}
-      <div className="sticky top-6 self-start">
+      <div className="sticky top-6 self-start space-y-3">
+      {wasPrefilled && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-700">
+          <Sparkles className="w-3.5 h-3.5" /> Pre-filled from Priya's discovery brief
+        </div>
+      )}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-zinc-900">Project Brief</CardTitle>
@@ -118,7 +203,13 @@ export function ProposalAgent() {
 
       {/* RIGHT: Results */}
       <div className="space-y-4">
-        <AgentStatusBanner status={status} errorMessage={error} agentName="Ravi" completedAt={completedAt} />
+        <AgentStatusBanner
+          status={status}
+          errorMessage={error}
+          agentName="Ravi"
+          completedAt={completedAt}
+          copyText={output ? formatForCopy(output) : undefined}
+        />
 
         {!output && !loading && (
           <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
@@ -128,6 +219,34 @@ export function ProposalAgent() {
 
       {output && (
         <>
+          {/* Save to Project */}
+          <Card className="bg-zinc-50 border-zinc-200">
+            <CardContent className="p-3">
+              {savedProjectName ? (
+                <div className="flex items-center gap-2 text-xs text-green-700">
+                  <Check className="w-3.5 h-3.5" /> Saved to {savedProjectName}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="flex-1 text-xs border border-zinc-200 rounded-md px-2 py-1.5 bg-white"
+                  >
+                    <option value="">Attach this proposal to a project...</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 shrink-0" disabled={!selectedProjectId || saving} onClick={handleSaveToProject}>
+                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Header */}
           <Card>
             <CardContent className="p-5">

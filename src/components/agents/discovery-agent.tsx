@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { discoveryInputSchema, DiscoveryInput, DiscoveryOutput } from "@/agents/discovery-agent/schema";
@@ -9,13 +9,57 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, AlertTriangle, CheckCircle2, HelpCircle, ArrowRight } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, HelpCircle, ArrowRight, Save, Check } from "lucide-react";
 
-export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: () => void } = {}) {
+function formatForCopy(output: DiscoveryOutput, clientName: string): string {
+  return `DISCOVERY BRIEF — ${clientName}
+${"=".repeat(40)}
+
+SUMMARY
+${output.projectSummary}
+
+Readiness Score: ${output.readinessScore}/10
+
+RISKS
+${output.risks.map((r) => `- [${r.severity}] ${r.risk} — ${r.mitigation}`).join("\n")}
+
+NEXT QUESTIONS TO ASK
+${output.nextQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}
+
+CLIENT GOALS
+${output.clientGoals.map((g) => `- ${g}`).join("\n")}
+
+BUDGET ANALYSIS
+Stated: ${output.budgetAnalysis.stated}
+Realistic: ${output.budgetAnalysis.realistic}
+Assessment: ${output.budgetAnalysis.assessment}
+${output.budgetAnalysis.recommendation}
+
+REQUIREMENTS
+${output.requirements.map((r) => `- [${r.priority}] ${r.item}`).join("\n")}
+
+DESIGNER NOTES
+${output.designerNotes}`;
+}
+
+export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: (input: DiscoveryInput, output: DiscoveryOutput) => void } = {}) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<DiscoveryOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
+  const [lastInput, setLastInput] = useState<DiscoveryInput | null>(null);
+
+  const [leads, setLeads] = useState<{ id: string; name: string }[]>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savedLeadName, setSavedLeadName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/leads")
+      .then((r) => r.json())
+      .then((data) => setLeads(Array.isArray(data) ? data : []))
+      .catch(() => setLeads([]));
+  }, []);
 
   const { register, handleSubmit } = useForm<DiscoveryInput>({
     resolver: zodResolver(discoveryInputSchema),
@@ -36,6 +80,7 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: ()
     setLoading(true);
     setError(null);
     setOutput(null);
+    setSavedLeadName(null);
     try {
       const res = await fetch("/api/agents/discovery", {
         method: "POST",
@@ -45,11 +90,30 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: ()
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
+      setLastInput(data);
       setCompletedAt(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToLead = async () => {
+    if (!selectedLeadId || !output) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/leads/${selectedLeadId}/save-brief`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: output }),
+      });
+      if (res.ok) {
+        const lead = leads.find((l) => l.id === selectedLeadId);
+        setSavedLeadName(lead?.name || "lead");
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -120,7 +184,13 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: ()
 
       {/* RIGHT: Results */}
       <div className="space-y-4">
-        <AgentStatusBanner status={status} errorMessage={error} agentName="Priya" completedAt={completedAt} />
+        <AgentStatusBanner
+          status={status}
+          errorMessage={error}
+          agentName="Priya"
+          completedAt={completedAt}
+          copyText={output && lastInput ? formatForCopy(output, lastInput.clientName) : undefined}
+        />
 
         {!output && !loading && (
           <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
@@ -130,6 +200,34 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: ()
 
         {output && (
           <>
+            {/* Save to Lead */}
+            <Card className="bg-zinc-50 border-zinc-200">
+              <CardContent className="p-3">
+                {savedLeadName ? (
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <Check className="w-3.5 h-3.5" /> Saved to {savedLeadName}'s record
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedLeadId}
+                      onChange={(e) => setSelectedLeadId(e.target.value)}
+                      className="flex-1 text-xs border border-zinc-200 rounded-md px-2 py-1.5 bg-white"
+                    >
+                      <option value="">Attach this brief to a lead...</option>
+                      {leads.map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                    </select>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 shrink-0" disabled={!selectedLeadId || saving} onClick={handleSaveToLead}>
+                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Hero summary card */}
             <Card className="border-zinc-900">
               <CardContent className="p-5">
@@ -147,8 +245,8 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: ()
                     {output.readinessScore}/10
                   </span>
                 </div>
-                {onGenerateProposal && (
-                  <Button size="sm" className="w-full mt-3 gap-1.5" onClick={onGenerateProposal}>
+                {onGenerateProposal && lastInput && (
+                  <Button size="sm" className="w-full mt-3 gap-1.5" onClick={() => onGenerateProposal(lastInput, output)}>
                     Generate Proposal <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 )}

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
+import { InlineCopyButton } from "@/components/agents/inline-copy-button";
 import { Loader2, MessageSquare, Mail, Users, HelpCircle } from "lucide-react";
 
 export function TestimonialAgent() {
@@ -88,7 +89,13 @@ export function TestimonialAgent() {
 
       {/* RIGHT: Results */}
       <div className="space-y-4">
-        <AgentStatusBanner status={status} errorMessage={error} agentName="Vikram" completedAt={completedAt} />
+        <AgentStatusBanner
+          status={status}
+          errorMessage={error}
+          agentName="Vikram"
+          completedAt={completedAt}
+          copyText={output ? output.testimonialRequest.message : undefined}
+        />
 
         {!output && !loading && (
           <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
@@ -113,9 +120,12 @@ export function TestimonialAgent() {
 
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="w-3.5 h-3.5 text-green-600" />
-                <h3 className="text-xs font-semibold text-zinc-900">WhatsApp Version</h3>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-green-600" />
+                  <h3 className="text-xs font-semibold text-zinc-900">WhatsApp Version</h3>
+                </div>
+                <InlineCopyButton text={output.whatsappVersion} />
               </div>
               <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-zinc-700 whitespace-pre-line">
                 {output.whatsappVersion}

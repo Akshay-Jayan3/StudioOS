@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
+import { InlineCopyButton } from "@/components/agents/inline-copy-button";
 import { Loader2, Camera, Link2, BookOpen } from "lucide-react";
 
 export function ContentAgent() {
@@ -115,7 +116,13 @@ export function ContentAgent() {
 
       {/* RIGHT: Results */}
       <div className="space-y-4">
-        <AgentStatusBanner status={status} errorMessage={error} agentName="Neha" completedAt={completedAt} />
+        <AgentStatusBanner
+          status={status}
+          errorMessage={error}
+          agentName="Neha"
+          completedAt={completedAt}
+          copyText={output ? `${output.caseStudy.title}\n\n${output.caseStudy.problem}\n\n${output.caseStudy.process}\n\n${output.caseStudy.outcome}` : undefined}
+        />
 
         {!output && !loading && (
           <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
@@ -177,9 +184,12 @@ export function ContentAgent() {
             {/* Instagram */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Camera className="w-3.5 h-3.5 text-zinc-500" />
-                  <h3 className="text-xs font-semibold text-zinc-900">Instagram Caption</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Camera className="w-3.5 h-3.5 text-zinc-500" />
+                    <h3 className="text-xs font-semibold text-zinc-900">Instagram Caption</h3>
+                  </div>
+                  <InlineCopyButton text={output.instagramCaption.fullCaption} />
                 </div>
                 <div className="bg-zinc-50 rounded-md p-3 text-xs text-zinc-700 leading-relaxed whitespace-pre-line font-mono">
                   {output.instagramCaption.fullCaption}
@@ -190,9 +200,12 @@ export function ContentAgent() {
             {/* LinkedIn */}
             <Card>
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Link2 className="w-3.5 h-3.5 text-zinc-500" />
-                  <h3 className="text-xs font-semibold text-zinc-900">LinkedIn Post</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-3.5 h-3.5 text-zinc-500" />
+                    <h3 className="text-xs font-semibold text-zinc-900">LinkedIn Post</h3>
+                  </div>
+                  <InlineCopyButton text={output.linkedinPost.fullPost} />
                 </div>
                 <div className="bg-zinc-50 rounded-md p-3 text-xs text-zinc-700 leading-relaxed whitespace-pre-line">
                   {output.linkedinPost.fullPost}

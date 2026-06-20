@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DiscoveryAgent } from "@/components/agents/discovery-agent";
-import { ProposalAgent } from "@/components/agents/proposal-agent";
+import { ProposalAgent, ProposalPrefill } from "@/components/agents/proposal-agent";
 import { ContentAgent } from "@/components/agents/content-agent";
 import { UpdateAgent } from "@/components/agents/update-agent";
 import { TestimonialAgent } from "@/components/agents/testimonial-agent";
@@ -77,6 +77,7 @@ export default function AIEmployeesPage() {
   const [runs, setRuns] = useState<AIRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("discovery");
+  const [proposalPrefill, setProposalPrefill] = useState<ProposalPrefill | undefined>(undefined);
 
   useEffect(() => {
     fetch("/api/ai-runs")
@@ -186,13 +187,26 @@ export default function AIEmployeesPage() {
 
         <TabsContent value="discovery">
           <AgentWrapper employee={employeesWithStats[0]}>
-            <DiscoveryAgent onGenerateProposal={() => setActiveTab("proposal")} />
+            <DiscoveryAgent
+              onGenerateProposal={(input, output) => {
+                setProposalPrefill({
+                  clientName: input.clientName,
+                  projectType: input.projectType,
+                  spaceDetails: input.spaceDescription,
+                  budget: input.budget,
+                  timeline: input.timeline,
+                  styleDirection: input.stylePreferences,
+                  keyRequirements: output.requirements.map((r) => r.item).join(", "),
+                });
+                setActiveTab("proposal");
+              }}
+            />
           </AgentWrapper>
         </TabsContent>
 
         <TabsContent value="proposal">
           <AgentWrapper employee={employeesWithStats[1]}>
-            <ProposalAgent />
+            <ProposalAgent prefill={proposalPrefill} />
           </AgentWrapper>
         </TabsContent>
 

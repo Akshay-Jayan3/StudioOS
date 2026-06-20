@@ -1,4 +1,7 @@
-import { CheckCircle2, XCircle, Loader2, Pencil } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { CheckCircle2, XCircle, Loader2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AgentStatusBannerProps {
@@ -6,10 +9,13 @@ interface AgentStatusBannerProps {
   errorMessage?: string | null;
   agentName: string;
   completedAt?: Date | null;
-  onEditInputs?: () => void;
+  copyText?: string;
+  saveAction?: React.ReactNode;
 }
 
-export function AgentStatusBanner({ status, errorMessage, agentName, completedAt, onEditInputs }: AgentStatusBannerProps) {
+export function AgentStatusBanner({ status, errorMessage, agentName, completedAt, copyText, saveAction }: AgentStatusBannerProps) {
+  const [copied, setCopied] = useState(false);
+
   if (status === "idle") return null;
 
   if (status === "loading") {
@@ -33,6 +39,13 @@ export function AgentStatusBanner({ status, errorMessage, agentName, completedAt
     );
   }
 
+  const handleCopy = async () => {
+    if (!copyText) return;
+    await navigator.clipboard.writeText(copyText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="flex items-center justify-between gap-2.5 px-4 py-3 rounded-md bg-green-50 border border-green-200">
       <div className="flex items-center gap-2.5">
@@ -46,11 +59,15 @@ export function AgentStatusBanner({ status, errorMessage, agentName, completedAt
           )}
         </div>
       </div>
-      {onEditInputs && (
-        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-white" onClick={onEditInputs}>
-          <Pencil className="w-3 h-3" /> Edit & Re-run
-        </Button>
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        {saveAction}
+        {copyText && (
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 bg-white" onClick={handleCopy}>
+            {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
