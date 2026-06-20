@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Phone, Mail, Bot, Loader2 } from "lucide-react";
+import { Plus, Phone, Mail, Bot, Loader2, UserPlus } from "lucide-react";
 import type { Lead } from "@/lib/supabase/types";
 import { mockLeads } from "@/lib/mock-data";
 
@@ -41,6 +41,7 @@ export default function LeadsPage() {
   const [usingMock, setUsingMock] = useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [converting, setConverting] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AddLeadForm>({
     resolver: zodResolver(addLeadSchema),
@@ -106,6 +107,28 @@ export default function LeadsPage() {
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: status as any } : l)));
   }
 
+  async function convertToClient(lead: any) {
+    if (usingMock) return;
+    setConverting(lead.id);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          notes: `Converted from lead ${lead.id}. ${lead.notes || ""}`.trim(),
+        }),
+      });
+      if (res.ok) {
+        alert(`${lead.name} added as a client. Go to Projects to create their first project.`);
+      }
+    } finally {
+      setConverting(null);
+    }
+  }
+
   const byStatus = (status: string) => leads.filter((l) => (l as any).status === status);
 
   return (
@@ -159,6 +182,7 @@ export default function LeadsPage() {
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Source</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">AI Score</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500"></th>
                 </tr>
               </thead>
               <tbody>
@@ -216,6 +240,24 @@ export default function LeadsPage() {
                         >
                           {columns.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {!usingMock && (lead as any).status === "Won" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1"
+                          disabled={converting === lead.id}
+                          onClick={() => convertToClient(lead)}
+                        >
+                          {converting === lead.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <UserPlus className="w-3 h-3" />
+                          )}
+                          To Client
+                        </Button>
                       )}
                     </td>
                   </tr>

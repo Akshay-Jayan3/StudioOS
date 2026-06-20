@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const supabase = getClient();
 
   const { data, error } = await supabase
-    .from("projects")
+    .from("clients")
     .update(body)
     .eq("id", id)
     .select()
@@ -28,7 +28,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const supabase = getClient();
 
-  const { error } = await supabase.from("projects").delete().eq("id", id);
+  const { error } = await supabase.from("clients").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ deleted: true });
 }
