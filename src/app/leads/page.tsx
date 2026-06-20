@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Phone, Mail, Bot, Loader2, UserPlus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Phone, Mail, Bot, Loader2, UserPlus, Clock } from "lucide-react";
 import type { Lead } from "@/lib/supabase/types";
 import { mockLeads } from "@/lib/mock-data";
 
@@ -42,6 +43,11 @@ export default function LeadsPage() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState<string | null>(null);
+  const [lostDialogLead, setLostDialogLead] = useState<any | null>(null);
+  const [lostReason, setLostReason] = useState("");
+  const [lostNotes, setLostNotes] = useState("");
+  const [revisitDate, setRevisitDate] = useState("");
+  const [savingLost, setSavingLost] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AddLeadForm>({
     resolver: zodResolver(addLeadSchema),
@@ -97,14 +103,48 @@ export default function LeadsPage() {
     }
   }
 
-  async function updateStatus(id: string, status: string) {
+  async function updateStatus(id: string, status: string, lead?: any) {
     if (usingMock) return;
+    if (status === "Lost") {
+      setLostDialogLead(lead);
+      setLostReason("");
+      setLostNotes("");
+      setRevisitDate("");
+      return;
+    }
     await fetch(`/api/leads/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: status as any } : l)));
+  }
+
+  async function confirmLost() {
+    if (!lostDialogLead) return;
+    setSavingLost(true);
+    try {
+      await fetch(`/api/leads/${lostDialogLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "Lost",
+          lost_reason: lostReason || null,
+          lost_notes: lostNotes || null,
+          revisit_date: revisitDate || null,
+        }),
+      });
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === lostDialogLead.id
+            ? { ...l, status: "Lost" as any, lost_reason: lostReason, lost_notes: lostNotes, revisit_date: revisitDate }
+            : l
+        )
+      );
+      setLostDialogLead(null);
+    } finally {
+      setSavingLost(false);
+    }
   }
 
   async function convertToClient(lead: any) {
@@ -163,6 +203,33 @@ export default function LeadsPage() {
           );
         })}
       </div>
+
+      {/* Nurture Queue — lost leads with a revisit date */}
+      {!usingMock && leads.some((l: any) => l.status === "Lost" && l.revisit_date) && (
+        <Card className="mb-6 border-orange-200 bg-orange-50/50">
+          <CardContent className="p-4">
+            <h3 className="text-xs font-semibold text-orange-800 mb-3 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> Nurture Queue — Revisit These Leads
+            </h3>
+            <div className="space-y-2">
+              {leads
+                .filter((l: any) => l.status === "Lost" && l.revisit_date)
+                .sort((a: any, b: any) => new Date(a.revisit_date).getTime() - new Date(b.revisit_date).getTime())
+                .map((lead: any) => (
+                  <div key={lead.id} className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-orange-100">
+                    <div>
+                      <p className="text-xs font-medium text-zinc-900">{lead.name}</p>
+                      <p className="text-[10px] text-zinc-500">{lead.lost_reason || "No reason recorded"}</p>
+                    </div>
+                    <span className="text-xs font-medium text-orange-700">
+                      Revisit: {new Date(lead.revisit_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table */}
       <Card>
@@ -235,7 +302,7 @@ export default function LeadsPage() {
                       ) : (
                         <select
                           value={(lead as any).status}
-                          onChange={(e) => updateStatus(lead.id, e.target.value)}
+                          onChange={(e) => updateStatus(lead.id, e.target.value, lead)}
                           className={`text-xs font-medium px-2 py-1 rounded-md border-0 cursor-pointer ${statusColor[(lead as any).status]}`}
                         >
                           {columns.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -319,6 +386,61 @@ export default function LeadsPage() {
               <p className="text-[10px] text-zinc-400 text-center">Connect Supabase to persist leads</p>
             )}
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lost Reason Dialog */}
+      <Dialog open={!!lostDialogLead} onOpenChange={(v) => !v && setLostDialogLead(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Mark "{lostDialogLead?.name}" as Lost</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-xs font-medium text-zinc-700 mb-1 block">Reason</label>
+              <select
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                className="w-full text-sm border border-zinc-200 rounded-md px-3 py-2 bg-white"
+              >
+                <option value="">— Select reason —</option>
+                <option value="Budget mismatch">Budget mismatch</option>
+                <option value="Went with competitor">Went with competitor</option>
+                <option value="Bad timing">Bad timing</option>
+                <option value="Ghosted">Ghosted / stopped responding</option>
+                <option value="Changed mind">Changed mind about project</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-zinc-700 mb-1 block">Notes</label>
+              <Textarea
+                value={lostNotes}
+                onChange={(e) => setLostNotes(e.target.value)}
+                rows={2}
+                className="text-sm resize-none"
+                placeholder="Any context worth remembering..."
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-zinc-700 mb-1 block">Revisit Date (optional)</label>
+              <Input
+                type="date"
+                value={revisitDate}
+                onChange={(e) => setRevisitDate(e.target.value)}
+                className="text-sm"
+              />
+              <p className="text-[10px] text-zinc-400 mt-1">Set this to add the lead to your Nurture Queue</p>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setLostDialogLead(null)}>
+                Cancel
+              </Button>
+              <Button type="button" size="sm" className="flex-1" disabled={savingLost} onClick={confirmLost}>
+                {savingLost ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving...</> : "Confirm Lost"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

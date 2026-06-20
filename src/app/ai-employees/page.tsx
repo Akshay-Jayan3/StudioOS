@@ -9,7 +9,8 @@ import { DiscoveryAgent } from "@/components/agents/discovery-agent";
 import { ProposalAgent } from "@/components/agents/proposal-agent";
 import { ContentAgent } from "@/components/agents/content-agent";
 import { UpdateAgent } from "@/components/agents/update-agent";
-import { Bot, Zap, Search, FileText, Megaphone, MessageSquare } from "lucide-react";
+import { TestimonialAgent } from "@/components/agents/testimonial-agent";
+import { Bot, Zap, Search, FileText, Megaphone, MessageSquare, Star } from "lucide-react";
 
 const employees = [
   {
@@ -55,6 +56,17 @@ const employees = [
     output: "Email update, WhatsApp version, internal risk notes",
     tasksCompleted: 8,
     timeSaved: "16 hrs",
+  },
+  {
+    id: "testimonial",
+    name: "Vikram",
+    role: "Customer Success Specialist",
+    icon: Star,
+    description: "Writes testimonial and referral request messages after project completion. Turns happy clients into reviews and referrals without awkward asks.",
+    input: "Completed project details, client relationship notes",
+    output: "Testimonial request email, WhatsApp version, referral follow-up",
+    tasksCompleted: 0,
+    timeSaved: "0 hrs",
   },
 ];
 
@@ -165,6 +177,12 @@ export default function AIEmployeesPage() {
         <TabsContent value="update">
           <AgentWrapper employee={employees[3]}>
             <UpdateAgent />
+          </AgentWrapper>
+        </TabsContent>
+
+        <TabsContent value="testimonial">
+          <AgentWrapper employee={employees[4]}>
+            <TestimonialAgent />
           </AgentWrapper>
         </TabsContent>
       </Tabs>

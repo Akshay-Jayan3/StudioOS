@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { mockProjects } from "@/lib/mock-data";
 
 const statusColor: Record<string, string> = {
@@ -165,10 +166,10 @@ export default function ProjectsPage() {
               <Card key={project.id} className="hover:border-zinc-300 transition-colors group">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-3">
-                    <div>
+                    <Link href={`/projects/${project.id}`} className="hover:underline">
                       <p className="text-sm font-semibold text-zinc-900">{project.name}</p>
                       <p className="text-xs text-zinc-500 mt-0.5">{clientName}</p>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2">
                       {usingMock ? (
                         <span className={`text-xs font-medium px-2 py-1 rounded-md ${statusColor[project.status]}`}>
