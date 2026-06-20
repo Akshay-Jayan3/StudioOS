@@ -9,14 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, CheckCircle2, Pencil } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 
 export function ProposalAgent() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<ProposalOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
-  const [showForm, setShowForm] = useState(true);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit } = useForm<any>({
@@ -48,7 +47,6 @@ export function ProposalAgent() {
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
       setCompletedAt(new Date());
-      setShowForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -59,18 +57,9 @@ export function ProposalAgent() {
   const status = loading ? "loading" : error ? "error" : output ? "success" : "idle";
 
   return (
-    <div className="space-y-4">
-      {!showForm && (
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-zinc-200 rounded-md text-xs text-zinc-500 hover:border-zinc-300 transition-colors"
-        >
-          <span>Project Brief (collapsed)</span>
-          <span className="flex items-center gap-1 text-zinc-400"><Pencil className="w-3 h-3" /> Show form</span>
-        </button>
-      )}
-
-      {showForm && (
+    <div className="grid grid-cols-2 gap-6">
+      {/* LEFT: Form */}
+      <div className="sticky top-6 self-start">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-zinc-900">Project Brief</CardTitle>
@@ -125,18 +114,20 @@ export function ProposalAgent() {
           </form>
         </CardContent>
       </Card>
-      )}
+      </div>
 
-      <AgentStatusBanner
-        status={status}
-        errorMessage={error}
-        agentName="Ravi"
-        completedAt={completedAt}
-        onEditInputs={() => setShowForm(true)}
-      />
+      {/* RIGHT: Results */}
+      <div className="space-y-4">
+        <AgentStatusBanner status={status} errorMessage={error} agentName="Ravi" completedAt={completedAt} />
+
+        {!output && !loading && (
+          <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
+            <p className="text-xs text-zinc-400">Proposal will appear here</p>
+          </div>
+        )}
 
       {output && (
-        <div className="space-y-4">
+        <>
           {/* Header */}
           <Card>
             <CardContent className="p-5">
@@ -260,8 +251,9 @@ export function ProposalAgent() {
               <p className="text-xs text-zinc-600 italic leading-relaxed">{output.closingNote}</p>
             </CardContent>
           </Card>
-        </div>
+        </>
       )}
+      </div>
     </div>
   );
 }

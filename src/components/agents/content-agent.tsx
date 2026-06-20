@@ -9,14 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, Camera, Link2, BookOpen, Pencil } from "lucide-react";
+import { Loader2, Camera, Link2, BookOpen } from "lucide-react";
 
 export function ContentAgent() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<ContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
-  const [showForm, setShowForm] = useState(true);
 
   const { register, handleSubmit } = useForm<ContentInput>({
     resolver: zodResolver(contentInputSchema),
@@ -47,7 +46,6 @@ export function ContentAgent() {
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
       setCompletedAt(new Date());
-      setShowForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -58,18 +56,9 @@ export function ContentAgent() {
   const status = loading ? "loading" : error ? "error" : output ? "success" : "idle";
 
   return (
-    <div className="space-y-4">
-      {!showForm && (
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-zinc-200 rounded-md text-xs text-zinc-500 hover:border-zinc-300 transition-colors"
-        >
-          <span>Project Details (collapsed)</span>
-          <span className="flex items-center gap-1 text-zinc-400"><Pencil className="w-3 h-3" /> Show form</span>
-        </button>
-      )}
-
-      {showForm && (
+    <div className="grid grid-cols-2 gap-6">
+      {/* LEFT: Form */}
+      <div className="sticky top-6 self-start">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-zinc-900">Project Details</CardTitle>
@@ -122,18 +111,20 @@ export function ContentAgent() {
           </form>
         </CardContent>
       </Card>
-      )}
+      </div>
 
-      <AgentStatusBanner
-        status={status}
-        errorMessage={error}
-        agentName="Neha"
-        completedAt={completedAt}
-        onEditInputs={() => setShowForm(true)}
-      />
+      {/* RIGHT: Results */}
+      <div className="space-y-4">
+        <AgentStatusBanner status={status} errorMessage={error} agentName="Neha" completedAt={completedAt} />
+
+        {!output && !loading && (
+          <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
+            <p className="text-xs text-zinc-400">Marketing content will appear here</p>
+          </div>
+        )}
 
       {output && (
-        <div className="space-y-4">
+        <>
           {/* Project Story */}
           <Card className="border-zinc-900 bg-zinc-900 text-white">
             <CardContent className="p-5">
@@ -209,8 +200,9 @@ export function ContentAgent() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </>
       )}
+      </div>
     </div>
   );
 }

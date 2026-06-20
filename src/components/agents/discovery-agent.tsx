@@ -9,16 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, AlertTriangle, CheckCircle2, HelpCircle, Pencil } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, HelpCircle, ArrowRight } from "lucide-react";
 
-export function DiscoveryAgent() {
+export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: () => void } = {}) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<DiscoveryOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
-  const [showForm, setShowForm] = useState(true);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<DiscoveryInput>({
+  const { register, handleSubmit } = useForm<DiscoveryInput>({
     resolver: zodResolver(discoveryInputSchema),
     defaultValues: {
       clientName: "Priya Menon",
@@ -47,7 +46,6 @@ export function DiscoveryAgent() {
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
       setCompletedAt(new Date());
-      setShowForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -59,102 +57,141 @@ export function DiscoveryAgent() {
 
   const severityColor = { High: "text-red-600 bg-red-50", Medium: "text-yellow-700 bg-yellow-50", Low: "text-green-700 bg-green-50" };
   const priorityColor = { "Must Have": "bg-zinc-900 text-white", "Nice to Have": "bg-zinc-100 text-zinc-700", Optional: "bg-zinc-50 text-zinc-400" };
+  const fitLabel = output ? (output.readinessScore >= 7 ? "Strong Fit" : output.readinessScore >= 5 ? "Workable Fit" : "Needs More Discovery") : "";
+  const fitColor = output ? (output.readinessScore >= 7 ? "bg-green-500" : output.readinessScore >= 5 ? "bg-yellow-500" : "bg-red-500") : "";
 
   return (
-    <div className="space-y-4">
-      {!showForm && (
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-zinc-200 rounded-md text-xs text-zinc-500 hover:border-zinc-300 transition-colors"
-        >
-          <span>Client Questionnaire (collapsed)</span>
-          <span className="flex items-center gap-1 text-zinc-400"><Pencil className="w-3 h-3" /> Show form</span>
-        </button>
-      )}
+    <div className="grid grid-cols-2 gap-6">
+      {/* LEFT: Form */}
+      <div className="sticky top-6 self-start space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-zinc-900">Client Questionnaire</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-zinc-700 mb-1 block">Client Name</label>
+                  <Input {...register("clientName")} className="text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-700 mb-1 block">Project Type</label>
+                  <Input {...register("projectType")} className="text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Space Description</label>
+                <Textarea {...register("spaceDescription")} rows={2} className="text-sm resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-zinc-700 mb-1 block">Budget</label>
+                  <Input {...register("budget")} className="text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-700 mb-1 block">Timeline</label>
+                  <Input {...register("timeline")} className="text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Style Preferences</label>
+                <Textarea {...register("stylePreferences")} rows={2} className="text-sm resize-none" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Must Haves</label>
+                <Textarea {...register("mustHaves")} rows={2} className="text-sm resize-none" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Pain Points</label>
+                <Textarea {...register("painPoints")} rows={2} className="text-sm resize-none" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Additional Notes</label>
+                <Textarea {...register("additionalNotes")} rows={2} className="text-sm resize-none" />
+              </div>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</> : "Run Discovery Analysis"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
 
-      {showForm && (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-zinc-900">Client Questionnaire</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-zinc-700 mb-1 block">Client Name</label>
-                <Input {...register("clientName")} className="text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-zinc-700 mb-1 block">Project Type</label>
-                <Input {...register("projectType")} className="text-sm" />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-700 mb-1 block">Space Description</label>
-              <Textarea {...register("spaceDescription")} rows={2} className="text-sm resize-none" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-zinc-700 mb-1 block">Budget</label>
-                <Input {...register("budget")} className="text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-zinc-700 mb-1 block">Timeline</label>
-                <Input {...register("timeline")} className="text-sm" />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-700 mb-1 block">Style Preferences</label>
-              <Textarea {...register("stylePreferences")} rows={2} className="text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-700 mb-1 block">Must Haves</label>
-              <Textarea {...register("mustHaves")} rows={2} className="text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-700 mb-1 block">Pain Points</label>
-              <Textarea {...register("painPoints")} rows={2} className="text-sm resize-none" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-700 mb-1 block">Additional Notes</label>
-              <Textarea {...register("additionalNotes")} rows={2} className="text-sm resize-none" />
-            </div>
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</> : "Run Discovery Analysis"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      )}
+      {/* RIGHT: Results */}
+      <div className="space-y-4">
+        <AgentStatusBanner status={status} errorMessage={error} agentName="Priya" completedAt={completedAt} />
 
-      <AgentStatusBanner
-        status={status}
-        errorMessage={error}
-        agentName="Priya"
-        completedAt={completedAt}
-        onEditInputs={() => setShowForm(true)}
-      />
+        {!output && !loading && (
+          <div className="flex items-center justify-center h-64 border border-dashed border-zinc-200 rounded-lg">
+            <p className="text-xs text-zinc-400">Discovery brief will appear here</p>
+          </div>
+        )}
 
-      {output && (
-        <div className="space-y-4">
-          {/* Summary */}
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-semibold text-zinc-900">Project Summary</h3>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-zinc-400">Readiness</span>
+        {output && (
+          <>
+            {/* Hero summary card */}
+            <Card className="border-zinc-900">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">Discovery Brief</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${fitColor}`} />
+                    <span className="text-xs font-semibold text-zinc-900">{fitLabel}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-700 leading-relaxed">{output.projectSummary}</p>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-100">
+                  <span className="text-xs text-zinc-400">Readiness Score</span>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${output.readinessScore >= 7 ? "bg-green-100 text-green-700" : output.readinessScore >= 5 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
                     {output.readinessScore}/10
                   </span>
                 </div>
-              </div>
-              <p className="text-sm text-zinc-700 leading-relaxed">{output.projectSummary}</p>
-            </CardContent>
-          </Card>
+                {onGenerateProposal && (
+                  <Button size="sm" className="w-full mt-3 gap-1.5" onClick={onGenerateProposal}>
+                    Generate Proposal <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Goals */}
+            {/* Risks — highest priority, shown first */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" /> Risks
+                </h3>
+                <div className="space-y-2">
+                  {output.risks.map((r, i) => (
+                    <div key={i} className={`p-2.5 rounded-md ${severityColor[r.severity]}`}>
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <span className="text-xs font-medium">{r.risk}</span>
+                        <span className="text-[10px] font-medium opacity-70 shrink-0">{r.severity}</span>
+                      </div>
+                      <p className="text-xs opacity-75">{r.mitigation}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Next Questions — second priority */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
+                  <HelpCircle className="w-3.5 h-3.5" /> Next Questions to Ask
+                </h3>
+                <ol className="space-y-1.5">
+                  {output.nextQuestions.map((q, i) => (
+                    <li key={i} className="text-xs text-zinc-700 flex items-start gap-2">
+                      <span className="text-zinc-400 font-medium shrink-0">{i + 1}.</span> {q}
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+
+            {/* Client Goals */}
             <Card>
               <CardContent className="p-4">
                 <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
@@ -170,7 +207,7 @@ export function DiscoveryAgent() {
               </CardContent>
             </Card>
 
-            {/* Budget */}
+            {/* Budget Analysis */}
             <Card>
               <CardContent className="p-4">
                 <h3 className="text-xs font-semibold text-zinc-900 mb-3">Budget Analysis</h3>
@@ -193,70 +230,34 @@ export function DiscoveryAgent() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Requirements */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="text-xs font-semibold text-zinc-900 mb-3">Requirements</h3>
-              <div className="space-y-2">
-                {output.requirements.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-zinc-700">{r.item}</span>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${priorityColor[r.priority]}`}>
-                      {r.priority}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Risks */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" /> Risks
-              </h3>
-              <div className="space-y-2">
-                {output.risks.map((r, i) => (
-                  <div key={i} className={`p-2.5 rounded-md ${severityColor[r.severity]}`}>
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <span className="text-xs font-medium">{r.risk}</span>
-                      <span className="text-[10px] font-medium opacity-70 shrink-0">{r.severity}</span>
+            {/* Requirements */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-900 mb-3">Requirements</h3>
+                <div className="space-y-2">
+                  {output.requirements.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-zinc-700">{r.item}</span>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${priorityColor[r.priority]}`}>
+                        {r.priority}
+                      </span>
                     </div>
-                    <p className="text-xs opacity-75">{r.mitigation}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Next Questions */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
-                <HelpCircle className="w-3.5 h-3.5" /> Next Questions to Ask
-              </h3>
-              <ol className="space-y-1.5">
-                {output.nextQuestions.map((q, i) => (
-                  <li key={i} className="text-xs text-zinc-700 flex items-start gap-2">
-                    <span className="text-zinc-400 font-medium shrink-0">{i + 1}.</span> {q}
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
-
-          {/* Designer notes */}
-          <Card className="border-zinc-200 bg-zinc-50">
-            <CardContent className="p-4">
-              <h3 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide">Internal Designer Notes</h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">{output.designerNotes}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            {/* Designer notes */}
+            <Card className="border-zinc-200 bg-zinc-50">
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide">Internal Designer Notes</h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">{output.designerNotes}</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
     </div>
   );
 }

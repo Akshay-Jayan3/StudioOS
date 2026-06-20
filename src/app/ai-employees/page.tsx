@@ -76,6 +76,7 @@ type AIRun = { agent: string; status: string; created_at: string };
 export default function AIEmployeesPage() {
   const [runs, setRuns] = useState<AIRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("discovery");
 
   useEffect(() => {
     fetch("/api/ai-runs")
@@ -173,7 +174,7 @@ export default function AIEmployeesPage() {
       </div>
 
       {/* Agent Workspace */}
-      <Tabs defaultValue="discovery">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           {employeesWithStats.map((emp) => (
             <TabsTrigger key={emp.id} value={emp.id} className="gap-2">
@@ -185,7 +186,7 @@ export default function AIEmployeesPage() {
 
         <TabsContent value="discovery">
           <AgentWrapper employee={employeesWithStats[0]}>
-            <DiscoveryAgent />
+            <DiscoveryAgent onGenerateProposal={() => setActiveTab("proposal")} />
           </AgentWrapper>
         </TabsContent>
 
@@ -220,43 +221,26 @@ export default function AIEmployeesPage() {
 function AgentWrapper({ employee, children }: { employee: typeof employees[0] & { tasksCompleted: number; timeSaved: string }; children: React.ReactNode }) {
   const Icon = employee.icon;
   return (
-    <div className="grid grid-cols-3 gap-6">
-      {/* Agent info panel */}
-      <div>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-zinc-100 rounded-xl">
-                <Icon className="w-5 h-5 text-zinc-700" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-zinc-900">{employee.name}</p>
-                <p className="text-xs text-zinc-500">{employee.role}</p>
-              </div>
-            </div>
-            <p className="text-xs text-zinc-600 leading-relaxed mb-4">{employee.description}</p>
-            <div className="space-y-3">
-              <div className="bg-zinc-50 rounded-md p-3">
-                <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide mb-1">Input</p>
-                <p className="text-xs text-zinc-700">{employee.input}</p>
-              </div>
-              <div className="bg-zinc-50 rounded-md p-3">
-                <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide mb-1">Output</p>
-                <p className="text-xs text-zinc-700">{employee.output}</p>
-              </div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-zinc-400" />
-              <p className="text-xs text-zinc-500">{employee.tasksCompleted} tasks · {employee.timeSaved} saved</p>
-            </div>
-          </CardContent>
-        </Card>
+    <div>
+      {/* Compact employee strip */}
+      <div className="flex items-center gap-4 mb-5 px-4 py-3 bg-white border border-zinc-200 rounded-lg">
+        <div className="p-2 bg-zinc-100 rounded-lg shrink-0">
+          <Icon className="w-4 h-4 text-zinc-700" />
+        </div>
+        <div className="shrink-0">
+          <p className="text-sm font-semibold text-zinc-900">{employee.name}</p>
+          <p className="text-xs text-zinc-500">{employee.role}</p>
+        </div>
+        <div className="h-8 w-px bg-zinc-200 shrink-0" />
+        <p className="text-xs text-zinc-500 flex-1 leading-relaxed">{employee.description}</p>
+        <div className="flex items-center gap-1.5 shrink-0 text-xs text-zinc-500">
+          <Zap className="w-3.5 h-3.5 text-zinc-400" />
+          {employee.tasksCompleted} tasks · {employee.timeSaved} saved
+        </div>
       </div>
 
-      {/* Agent form + output */}
-      <div className="col-span-2">
-        {children}
-      </div>
+      {/* Agent form + output, side by side */}
+      {children}
     </div>
   );
 }
