@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -11,21 +11,31 @@ import {
   BarChart3,
   Settings,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const nav = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Leads", href: "/leads", icon: Users },
-  { label: "Clients", href: "/clients", icon: UserCheck },
-  { label: "Projects", href: "/projects", icon: FolderKanban },
-  { label: "AI Employees", href: "/ai-employees", icon: Bot },
-  { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Leads", href: "/admin/leads", icon: Users },
+  { label: "Clients", href: "/admin/clients", icon: UserCheck },
+  { label: "Projects", href: "/admin/projects", icon: FolderKanban },
+  { label: "AI Employees", href: "/admin/ai-employees", icon: Bot },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/admin/login");
+    router.refresh();
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 border-r border-zinc-200 bg-white flex flex-col">
@@ -71,6 +81,9 @@ export function Sidebar() {
             <p className="text-xs font-medium text-zinc-900 truncate">Ananya S.</p>
             <p className="text-[10px] text-zinc-400 truncate">Lead Designer</p>
           </div>
+          <button onClick={handleSignOut} className="text-zinc-400 hover:text-zinc-700" title="Sign out">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>
