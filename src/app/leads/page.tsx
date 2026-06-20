@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Phone, Mail, Bot, Loader2, UserPlus, Clock } from "lucide-react";
+import { Plus, Phone, Mail, Bot, Loader2, UserPlus, Clock, FileText, AlertTriangle, HelpCircle, CheckCircle2 } from "lucide-react";
 import type { Lead } from "@/lib/supabase/types";
 import { mockLeads } from "@/lib/mock-data";
 
@@ -48,6 +48,7 @@ export default function LeadsPage() {
   const [lostNotes, setLostNotes] = useState("");
   const [revisitDate, setRevisitDate] = useState("");
   const [savingLost, setSavingLost] = useState(false);
+  const [viewBriefLead, setViewBriefLead] = useState<any | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AddLeadForm>({
     resolver: zodResolver(addLeadSchema),
@@ -310,22 +311,34 @@ export default function LeadsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      {!usingMock && (lead as any).status === "Won" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs gap-1"
-                          disabled={converting === lead.id}
-                          onClick={() => convertToClient(lead)}
-                        >
-                          {converting === lead.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <UserPlus className="w-3 h-3" />
-                          )}
-                          To Client
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {(lead as any).discovery_brief && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => setViewBriefLead(lead)}
+                          >
+                            <FileText className="w-3 h-3" /> Brief
+                          </Button>
+                        )}
+                        {!usingMock && (lead as any).status === "Won" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            disabled={converting === lead.id}
+                            onClick={() => convertToClient(lead)}
+                          >
+                            {converting === lead.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <UserPlus className="w-3 h-3" />
+                            )}
+                            To Client
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -441,6 +454,65 @@ export default function LeadsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Saved Discovery Brief */}
+      <Dialog open={!!viewBriefLead} onOpenChange={(v) => !v && setViewBriefLead(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">{viewBriefLead?.name}'s Discovery Brief</DialogTitle>
+          </DialogHeader>
+          {viewBriefLead?.discovery_brief && (
+            <div className="space-y-4 mt-2">
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-1">Summary</p>
+                <p className="text-sm text-zinc-700 leading-relaxed">{viewBriefLead.discovery_brief.projectSummary}</p>
+                <p className="text-xs text-zinc-400 mt-1">Readiness: {viewBriefLead.discovery_brief.readinessScore}/10</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-2 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" /> Risks
+                </p>
+                <ul className="space-y-1">
+                  {viewBriefLead.discovery_brief.risks?.map((r: any, i: number) => (
+                    <li key={i} className="text-xs text-zinc-600">
+                      <span className="font-medium">[{r.severity}]</span> {r.risk} — {r.mitigation}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-2 flex items-center gap-1.5">
+                  <HelpCircle className="w-3.5 h-3.5" /> Next Questions
+                </p>
+                <ol className="space-y-1">
+                  {viewBriefLead.discovery_brief.nextQuestions?.map((q: string, i: number) => (
+                    <li key={i} className="text-xs text-zinc-600">{i + 1}. {q}</li>
+                  ))}
+                </ol>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-2 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Client Goals
+                </p>
+                <ul className="space-y-1">
+                  {viewBriefLead.discovery_brief.clientGoals?.map((g: string, i: number) => (
+                    <li key={i} className="text-xs text-zinc-600">· {g}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-zinc-50 rounded-md p-3">
+                <p className="text-xs font-semibold text-zinc-500 mb-1 uppercase tracking-wide">Designer Notes</p>
+                <p className="text-xs text-zinc-600">{viewBriefLead.discovery_brief.designerNotes}</p>
+              </div>
+              {viewBriefLead.discovery_brief_saved_at && (
+                <p className="text-[10px] text-zinc-400 text-center">
+                  Saved {new Date(viewBriefLead.discovery_brief_saved_at).toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

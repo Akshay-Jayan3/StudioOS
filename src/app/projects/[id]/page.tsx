@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Loader2, Check, Trash2, Upload, FileText, Image as ImageIcon, Ruler, Star } from "lucide-react";
+import { Plus, Loader2, Check, Trash2, Upload, FileText, Image as ImageIcon, Ruler, Star, Eye } from "lucide-react";
 import Link from "next/link";
 
 const fileTypeIcons: Record<string, any> = {
@@ -33,6 +33,7 @@ export default function ProjectDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [fileType, setFileType] = useState("inspiration");
   const [requestingTestimonial, setRequestingTestimonial] = useState(false);
+  const [viewProposal, setViewProposal] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -292,6 +293,26 @@ export default function ProjectDetailPage() {
             </CardContent>
           </Card>
 
+          {project?.latest_proposal && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" /> Latest Proposal
+                </h3>
+                <p className="text-xs text-zinc-700 font-medium mb-1 line-clamp-1">{project.latest_proposal.proposalTitle}</p>
+                <p className="text-xs text-zinc-500 mb-1">{project.latest_proposal.pricing?.totalEstimate}</p>
+                {project.latest_proposal_saved_at && (
+                  <p className="text-[10px] text-zinc-400 mb-3">
+                    Saved {new Date(project.latest_proposal_saved_at).toLocaleDateString()}
+                  </p>
+                )}
+                <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => setViewProposal(true)}>
+                  <Eye className="w-3.5 h-3.5" /> View Full Proposal
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {project?.status === "Completed" && (
             <Card>
               <CardContent className="p-4">
@@ -342,6 +363,55 @@ export default function ProjectDetailPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Saved Proposal */}
+      <Dialog open={viewProposal} onOpenChange={setViewProposal}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">{project?.latest_proposal?.proposalTitle}</DialogTitle>
+          </DialogHeader>
+          {project?.latest_proposal && (
+            <div className="space-y-4 mt-2">
+              <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-line">{project.latest_proposal.executiveSummary}</p>
+
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-2">Project Scope</p>
+                {project.latest_proposal.projectScope?.map((s: any, i: number) => (
+                  <div key={i} className="mb-2">
+                    <p className="text-xs font-medium text-zinc-800">{s.area}</p>
+                    <p className="text-xs text-zinc-500">{s.description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-2">Timeline ({project.latest_proposal.timeline?.totalDuration})</p>
+                {project.latest_proposal.timeline?.phases?.map((p: any, i: number) => (
+                  <p key={i} className="text-xs text-zinc-600">· {p.phase} — {p.duration}</p>
+                ))}
+              </div>
+
+              <div className="bg-zinc-50 rounded-md p-3">
+                <p className="text-xs font-semibold text-zinc-900 mb-2">Pricing</p>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-zinc-500">Design Fee</span>
+                  <span className="font-medium text-zinc-900">{project.latest_proposal.pricing?.designFee?.amount}</span>
+                </div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-zinc-500">Procurement</span>
+                  <span className="font-medium text-zinc-900">{project.latest_proposal.pricing?.procurementEstimate}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-zinc-200 pt-1.5 mt-1.5">
+                  <span className="font-semibold text-zinc-900">Total</span>
+                  <span className="font-bold text-zinc-900">{project.latest_proposal.pricing?.totalEstimate}</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 italic">{project.latest_proposal.closingNote}</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
