@@ -8,12 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Mail, MessageSquare, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
+import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
+import { Loader2, Mail, MessageSquare, AlertTriangle, CheckCircle2, ArrowRight, Pencil } from "lucide-react";
 
 export function UpdateAgent() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<UpdateOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [completedAt, setCompletedAt] = useState<Date | null>(null);
+  const [showForm, setShowForm] = useState(true);
 
   const { register, handleSubmit } = useForm<UpdateInput>({
     resolver: zodResolver(updateInputSchema),
@@ -43,6 +46,8 @@ export function UpdateAgent() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
+      setCompletedAt(new Date());
+      setShowForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -50,11 +55,23 @@ export function UpdateAgent() {
     }
   };
 
+  const status = loading ? "loading" : error ? "error" : output ? "success" : "idle";
   const healthColor = { "On Track": "bg-green-50 text-green-700", "At Risk": "bg-yellow-50 text-yellow-700", Delayed: "bg-red-50 text-red-700" };
   const ownerColor = { Studio: "bg-zinc-100 text-zinc-600", Client: "bg-blue-50 text-blue-700", Vendor: "bg-purple-50 text-purple-700" };
 
   return (
     <div className="space-y-4">
+      {!showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-zinc-200 rounded-md text-xs text-zinc-500 hover:border-zinc-300 transition-colors"
+        >
+          <span>Project Status Input (collapsed)</span>
+          <span className="flex items-center gap-1 text-zinc-400"><Pencil className="w-3 h-3" /> Show form</span>
+        </button>
+      )}
+
+      {showForm && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-zinc-900">Project Status Input</CardTitle>
@@ -109,9 +126,17 @@ export function UpdateAgent() {
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating Update...</> : "Generate Client Update"}
             </Button>
           </form>
-          {error && <p className="mt-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
         </CardContent>
       </Card>
+      )}
+
+      <AgentStatusBanner
+        status={status}
+        errorMessage={error}
+        agentName="Aryan"
+        completedAt={completedAt}
+        onEditInputs={() => setShowForm(true)}
+      />
 
       {output && (
         <div className="space-y-4">
