@@ -16,6 +16,8 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [leadCaptured, setLeadCaptured] = useState(false);
+  const [leadId, setLeadId] = useState<string | undefined>(undefined);
+  const [conversationComplete, setConversationComplete] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function ChatWidget() {
   }, [messages, loading]);
 
   async function sendMessage() {
-    if (!input.trim() || loading || leadCaptured) return;
+    if (!input.trim() || loading || conversationComplete) return;
     const userMessage: Message = { role: "user", content: input.trim() };
     const updated = [...messages, userMessage];
     setMessages(updated);
@@ -34,12 +36,14 @@ export default function ChatWidget() {
       const res = await fetch("/api/chat/lead-intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updated }),
+        body: JSON.stringify({ messages: updated, leadId }),
       });
       const json = await res.json();
       if (json.success) {
         setMessages((prev) => [...prev, { role: "assistant", content: json.reply }]);
         if (json.leadCaptured) setLeadCaptured(true);
+        if (json.leadId) setLeadId(json.leadId);
+        if (json.conversationComplete) setConversationComplete(true);
       } else {
         setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong on my end — mind trying that again?" }]);
       }
@@ -63,9 +67,16 @@ export default function ChatWidget() {
                 <p className="text-[10px] text-[#bdb8b0]">Nilaya Interiors</p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="text-[#bdb8b0] hover:text-[#f6f3ee]">
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {leadCaptured && (
+                <span className="flex items-center gap-1 text-[10px] text-[#d4af37]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" /> Saved
+                </span>
+              )}
+              <button onClick={() => setOpen(false)} className="text-[#bdb8b0] hover:text-[#f6f3ee]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -90,15 +101,15 @@ export default function ChatWidget() {
                 </div>
               </div>
             )}
-            {leadCaptured && (
+            {conversationComplete && (
               <div className="flex items-center gap-2 text-xs text-[#d4af37] justify-center py-2">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Got it — our team will reach out soon!
+                <CheckCircle2 className="w-3.5 h-3.5" /> Thanks — our team will be in touch soon!
               </div>
             )}
           </div>
 
           {/* Input */}
-          {!leadCaptured && (
+          {!conversationComplete && (
             <div className="flex items-center gap-2 px-3 py-3 border-t border-[rgba(212,175,55,0.15)]">
               <input
                 value={input}

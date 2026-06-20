@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Phone, Mail, Bot, Loader2, UserPlus, Clock, FileText, AlertTriangle, HelpCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Phone, Mail, Bot, Loader2, UserPlus, Clock, FileText, AlertTriangle, HelpCircle, CheckCircle2, Search } from "lucide-react";
 import type { Lead } from "@/lib/supabase/types";
 import { mockLeads } from "@/lib/mock-data";
+import Link from "next/link";
 
 const statusColor: Record<string, string> = {
   "New Lead": "bg-zinc-100 text-zinc-700",
@@ -312,6 +313,13 @@ export default function LeadsPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1.5">
+                        {!usingMock && (
+                          <Link href={`/admin/ai-employees?tab=discovery&leadId=${lead.id}`}>
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                              <Search className="w-3 h-3" /> Discovery
+                            </Button>
+                          </Link>
+                        )}
                         {(lead as any).discovery_brief && (
                           <Button
                             size="sm"

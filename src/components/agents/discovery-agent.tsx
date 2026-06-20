@@ -9,7 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, AlertTriangle, CheckCircle2, HelpCircle, ArrowRight, Save, Check } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, HelpCircle, ArrowRight, Save, Check, Sparkles } from "lucide-react";
+
+export type DiscoveryPrefill = Partial<{
+  clientName: string;
+  projectType: string;
+  budget: string;
+  spaceDescription: string;
+  timeline: string;
+  stylePreferences: string;
+  mustHaves: string;
+  painPoints: string;
+  additionalNotes: string;
+}>;
 
 function formatForCopy(output: DiscoveryOutput, clientName: string): string {
   return `DISCOVERY BRIEF — ${clientName}
@@ -42,15 +54,26 @@ DESIGNER NOTES
 ${output.designerNotes}`;
 }
 
-export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: (input: DiscoveryInput, output: DiscoveryOutput) => void } = {}) {
+export function DiscoveryAgent({
+  onGenerateProposal,
+  prefill,
+  defaultLeadId,
+  isLeadFlow,
+}: {
+  onGenerateProposal?: (input: DiscoveryInput, output: DiscoveryOutput) => void;
+  prefill?: DiscoveryPrefill;
+  defaultLeadId?: string;
+  isLeadFlow?: boolean;
+} = {}) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<DiscoveryOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [lastInput, setLastInput] = useState<DiscoveryInput | null>(null);
+  const [wasPrefilled, setWasPrefilled] = useState(false);
 
   const [leads, setLeads] = useState<{ id: string; name: string }[]>([]);
-  const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [selectedLeadId, setSelectedLeadId] = useState(defaultLeadId || "");
   const [saving, setSaving] = useState(false);
   const [savedLeadName, setSavedLeadName] = useState<string | null>(null);
 
@@ -61,20 +84,50 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: (i
       .catch(() => setLeads([]));
   }, []);
 
-  const { register, handleSubmit } = useForm<DiscoveryInput>({
+  const { register, handleSubmit, setValue } = useForm<DiscoveryInput>({
     resolver: zodResolver(discoveryInputSchema),
-    defaultValues: {
-      clientName: "Priya Menon",
-      projectType: "Full Home Interior – 3BHK",
-      spaceDescription: "1800 sqft apartment in Banjara Hills, Hyderabad. 3 bedrooms, living + dining, kitchen, 2 bathrooms. 9ft ceilings. East-West facing.",
-      budget: "₹18 lakhs all-inclusive",
-      timeline: "Move-in by October 2024, so ideally done by September",
-      stylePreferences: "Modern but warm, not too minimal. Saw some projects on Pinterest – neutral tones, lots of wood textures, some greenery. Wife likes earthy colors.",
-      mustHaves: "A home office space in the master bedroom. Good storage in all rooms. A statement dining light. Kid-friendly materials for the living room.",
-      painPoints: "Previous contractor left mid-project. Hate surprises – want to know costs upfront. Need someone who can manage vendors so we don't have to.",
-      additionalNotes: "Wife is the main decision maker. They have a 4-year-old. Husband travels for work frequently.",
-    },
+    defaultValues: isLeadFlow
+      ? {
+          clientName: "",
+          projectType: "",
+          spaceDescription: "",
+          budget: "",
+          timeline: "",
+          stylePreferences: "",
+          mustHaves: "",
+          painPoints: "",
+          additionalNotes: "",
+        }
+      : {
+          clientName: "Priya Menon",
+          projectType: "Full Home Interior – 3BHK",
+          spaceDescription: "1800 sqft apartment in Banjara Hills, Hyderabad. 3 bedrooms, living + dining, kitchen, 2 bathrooms. 9ft ceilings. East-West facing.",
+          budget: "₹18 lakhs all-inclusive",
+          timeline: "Move-in by October 2024, so ideally done by September",
+          stylePreferences: "Modern but warm, not too minimal. Saw some projects on Pinterest – neutral tones, lots of wood textures, some greenery. Wife likes earthy colors.",
+          mustHaves: "A home office space in the master bedroom. Good storage in all rooms. A statement dining light. Kid-friendly materials for the living room.",
+          painPoints: "Previous contractor left mid-project. Hate surprises – want to know costs upfront. Need someone who can manage vendors so we don't have to.",
+          additionalNotes: "Wife is the main decision maker. They have a 4-year-old. Husband travels for work frequently.",
+        },
   });
+
+  useEffect(() => {
+    if (!prefill) return;
+    if (prefill.clientName) setValue("clientName", prefill.clientName);
+    if (prefill.projectType) setValue("projectType", prefill.projectType);
+    if (prefill.budget) setValue("budget", prefill.budget);
+    if (prefill.spaceDescription) setValue("spaceDescription", prefill.spaceDescription);
+    if (prefill.timeline) setValue("timeline", prefill.timeline);
+    if (prefill.stylePreferences) setValue("stylePreferences", prefill.stylePreferences);
+    if (prefill.mustHaves) setValue("mustHaves", prefill.mustHaves);
+    if (prefill.painPoints) setValue("painPoints", prefill.painPoints);
+    if (prefill.additionalNotes) setValue("additionalNotes", prefill.additionalNotes);
+    setWasPrefilled(true);
+  }, [prefill, setValue]);
+
+  useEffect(() => {
+    if (defaultLeadId) setSelectedLeadId(defaultLeadId);
+  }, [defaultLeadId]);
 
   const onSubmit = async (data: DiscoveryInput) => {
     setLoading(true);
@@ -128,6 +181,11 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: (i
     <div className="grid grid-cols-2 gap-6">
       {/* LEFT: Form */}
       <div className="sticky top-6 self-start space-y-4">
+        {wasPrefilled && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-700">
+            <Sparkles className="w-3.5 h-3.5" /> Pre-filled from the lead record
+          </div>
+        )}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-zinc-900">Client Questionnaire</CardTitle>
@@ -137,42 +195,46 @@ export function DiscoveryAgent({ onGenerateProposal }: { onGenerateProposal?: (i
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-zinc-700 mb-1 block">Client Name</label>
-                  <Input {...register("clientName")} className="text-sm" />
+                  <Input {...register("clientName")} className="text-sm" placeholder="e.g. Priya Menon" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-zinc-700 mb-1 block">Project Type</label>
-                  <Input {...register("projectType")} className="text-sm" />
+                  <Input {...register("projectType")} className="text-sm" placeholder="e.g. Full Home Interior – 3BHK" />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-zinc-700 mb-1 block">Space Description</label>
-                <Textarea {...register("spaceDescription")} rows={2} className="text-sm resize-none" />
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">
+                  Space Description {isLeadFlow && <span className="text-zinc-400">(not captured by chatbot — fill in if known)</span>}
+                </label>
+                <Textarea {...register("spaceDescription")} rows={2} className="text-sm resize-none" placeholder="Size, rooms, current state of the space" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-zinc-700 mb-1 block">Budget</label>
-                  <Input {...register("budget")} className="text-sm" />
+                  <Input {...register("budget")} className="text-sm" placeholder="e.g. ₹18 lakhs" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-zinc-700 mb-1 block">Timeline</label>
-                  <Input {...register("timeline")} className="text-sm" />
+                  <Input {...register("timeline")} className="text-sm" placeholder="e.g. Move in by October" />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-zinc-700 mb-1 block">Style Preferences</label>
-                <Textarea {...register("stylePreferences")} rows={2} className="text-sm resize-none" />
+                <Textarea {...register("stylePreferences")} rows={2} className="text-sm resize-none" placeholder="Modern, traditional, warm, minimal..." />
               </div>
               <div>
                 <label className="text-xs font-medium text-zinc-700 mb-1 block">Must Haves</label>
-                <Textarea {...register("mustHaves")} rows={2} className="text-sm resize-none" />
+                <Textarea {...register("mustHaves")} rows={2} className="text-sm resize-none" placeholder="Specific features or requirements" />
               </div>
               <div>
                 <label className="text-xs font-medium text-zinc-700 mb-1 block">Pain Points</label>
-                <Textarea {...register("painPoints")} rows={2} className="text-sm resize-none" />
+                <Textarea {...register("painPoints")} rows={2} className="text-sm resize-none" placeholder="Frustrations or concerns mentioned" />
               </div>
               <div>
-                <label className="text-xs font-medium text-zinc-700 mb-1 block">Additional Notes</label>
-                <Textarea {...register("additionalNotes")} rows={2} className="text-sm resize-none" />
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">
+                  Additional Notes {isLeadFlow && <span className="text-zinc-400">(not captured by chatbot — fill in if known)</span>}
+                </label>
+                <Textarea {...register("additionalNotes")} rows={2} className="text-sm resize-none" placeholder="Anything else worth knowing" />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
                 {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</> : "Run Discovery Analysis"}

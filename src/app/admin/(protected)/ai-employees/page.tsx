@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DiscoveryAgent } from "@/components/agents/discovery-agent";
+import { DiscoveryAgent, DiscoveryPrefill } from "@/components/agents/discovery-agent";
 import { ProposalAgent, ProposalPrefill } from "@/components/agents/proposal-agent";
 import { ContentAgent } from "@/components/agents/content-agent";
 import { UpdateAgent } from "@/components/agents/update-agent";
@@ -74,10 +75,22 @@ const employees = [
 type AIRun = { agent: string; status: string; created_at: string };
 
 export default function AIEmployeesPage() {
+  return (
+    <Suspense fallback={null}>
+      <AIEmployeesPageInner />
+    </Suspense>
+  );
+}
+
+function AIEmployeesPageInner() {
+  const searchParams = useSearchParams();
+  const leadIdParam = searchParams.get("leadId");
   const [runs, setRuns] = useState<AIRun[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("discovery");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "discovery");
   const [proposalPrefill, setProposalPrefill] = useState<ProposalPrefill | undefined>(undefined);
+  const [discoveryPrefill, setDiscoveryPrefill] = useState<DiscoveryPrefill | undefined>(undefined);
+  const [discoveryLeadId, setDiscoveryLeadId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetch("/api/ai-runs")
@@ -86,6 +99,32 @@ export default function AIEmployeesPage() {
       .catch(() => setRuns([]))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const leadId = searchParams.get("leadId");
+    if (!leadId) return;
+    fetch("/api/leads")
+      .then((r) => r.json())
+      .then((data) => {
+        const lead = Array.isArray(data) ? data.find((l: any) => l.id === leadId) : null;
+        if (lead) {
+          setDiscoveryPrefill({
+            clientName: lead.name,
+            projectType: lead.project_type || undefined,
+            budget: lead.budget ? `₹${(lead.budget / 100000).toFixed(1)} lakhs` : undefined,
+            spaceDescription: lead.space_description || undefined,
+            timeline: lead.timeline || undefined,
+            stylePreferences: lead.style_preferences || undefined,
+            mustHaves: lead.must_haves || undefined,
+            painPoints: lead.pain_points || undefined,
+            additionalNotes: lead.notes || undefined,
+          });
+          setDiscoveryLeadId(lead.id);
+          setActiveTab("discovery");
+        }
+      })
+      .catch(() => {});
+  }, [searchParams]);
 
   const statsFor = (agentKey: string) => {
     const completed = runs.filter((r) => r.agent === agentKey && r.status === "completed");
@@ -188,6 +227,9 @@ export default function AIEmployeesPage() {
         <TabsContent value="discovery">
           <AgentWrapper employee={employeesWithStats[0]}>
             <DiscoveryAgent
+              isLeadFlow={!!leadIdParam}
+              prefill={discoveryPrefill}
+              defaultLeadId={discoveryLeadId}
               onGenerateProposal={(input, output) => {
                 setProposalPrefill({
                   clientName: input.clientName,

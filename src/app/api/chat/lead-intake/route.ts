@@ -12,6 +12,13 @@ function getServiceClient() {
   );
 }
 
+function parseBudget(budget?: string): number | null {
+  if (!budget) return null;
+  const num = parseFloat(budget.replace(/[^0-9.]/g, ""));
+  if (Number.isNaN(num)) return null;
+  return num * (budget.toLowerCase().includes("lakh") ? 100000 : 1);
+}
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   let messages: { role: "user" | "assistant"; content: string }[] = [];
@@ -20,6 +27,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = chatRequestSchema.parse(body);
     messages = parsed.messages;
+    const existingLeadId: string | undefined = body.leadId || undefined;
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -41,7 +49,7 @@ export async function POST(req: NextRequest) {
     const chatResult = await chat.sendMessage(lastMessage);
     const reply = chatResult.response.text();
 
-    // 2. Extraction check — has enough info been gathered to create a lead?
+    // 2. Extraction — pull whatever structured info is present so far
     const extractionModel = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL!,
     });
@@ -53,24 +61,35 @@ export async function POST(req: NextRequest) {
 
 ${transcript}
 
-Determine if enough information has been gathered to create a sales lead. You need at minimum: a name AND (an email OR a phone number). Project type, budget, and timeline are nice to have but not required to proceed.
+Extract whatever structured information is present in the conversation so far.
+
+"hasEnoughInfo" means: a name AND (an email OR a phone number) have been mentioned.
+
+"readyToWrapUp" means: hasEnoughInfo is true, AND at least project_type and (budget or timeline) have been mentioned, AND at least one of space_description, style_preferences, must_haves, or pain_points has been mentioned. Also set readyToWrapUp to true if the visitor clearly signals they want to end the conversation (e.g. "that's all", "gotta go", "thanks bye"), even if not everything was covered. Otherwise false — keep the conversation going.
+
+Other fields should be filled in if mentioned, omitted if not.
 
 Return JSON exactly in this shape:
 {
   "hasEnoughInfo": boolean,
+  "readyToWrapUp": boolean,
   "name": "string or omit",
   "email": "string or omit",
   "phone": "string or omit",
   "project_type": "string or omit",
   "budget": "string or omit",
   "timeline": "string or omit",
+  "space_description": "string or omit — size, rooms, current state of the space",
+  "style_preferences": "string or omit — style/aesthetic they mentioned",
+  "must_haves": "string or omit — specific features or requirements they mentioned",
+  "pain_points": "string or omit — frustrations or concerns they mentioned",
   "notes": "any other useful context, or omit"
 }`;
 
     const extractionResult = await extractionModel.generateContent(extractionPrompt);
     const extractionText = extractionResult.response.text();
     const jsonMatch = extractionText.match(/\{[\s\S]*\}/);
-    let extraction = { hasEnoughInfo: false } as ReturnType<typeof leadExtractionSchema.parse>;
+    let extraction = { hasEnoughInfo: false, readyToWrapUp: false } as ReturnType<typeof leadExtractionSchema.parse>;
 
     if (jsonMatch) {
       try {
@@ -81,36 +100,55 @@ Return JSON exactly in this shape:
     }
 
     let leadCaptured = false;
+    let leadId = existingLeadId;
 
-    if (extraction.hasEnoughInfo && extraction.name && (extraction.email || extraction.phone)) {
-      const supabase = getServiceClient();
-      const budgetNum = extraction.budget
-        ? parseFloat(extraction.budget.replace(/[^0-9.]/g, "")) * (extraction.budget.toLowerCase().includes("lakh") ? 100000 : 1)
-        : null;
+    const fieldUpdate = {
+      project_type: extraction.project_type || null,
+      budget: parseBudget(extraction.budget),
+      timeline: extraction.timeline || null,
+      space_description: extraction.space_description || null,
+      style_preferences: extraction.style_preferences || null,
+      must_haves: extraction.must_haves || null,
+      pain_points: extraction.pain_points || null,
+      notes: extraction.notes || null,
+    };
 
-      const { error: insertError } = await supabase.from("leads").insert({
-        name: extraction.name,
-        email: extraction.email || `no-email-${Date.now()}@placeholder.local`,
-        phone: extraction.phone || null,
-        project_type: extraction.project_type || null,
-        budget: budgetNum || null,
-        source: "AI Chatbot",
-        notes: extraction.notes || null,
-        status: "New Lead",
-      });
+    const supabase = getServiceClient();
 
-      if (!insertError) leadCaptured = true;
+    if (!leadId && extraction.hasEnoughInfo && extraction.name && (extraction.email || extraction.phone)) {
+      // First time we have enough to create the lead
+      const { data, error: insertError } = await supabase
+        .from("leads")
+        .insert({
+          name: extraction.name,
+          email: extraction.email || `no-email-${Date.now()}@placeholder.local`,
+          phone: extraction.phone || null,
+          source: "AI Chatbot",
+          status: "New Lead",
+          ...fieldUpdate,
+        })
+        .select()
+        .single();
+
+      if (!insertError && data) {
+        leadCaptured = true;
+        leadId = data.id;
+      }
+    } else if (leadId) {
+      // Lead already exists — keep enriching it as the conversation continues
+      await supabase.from("leads").update(fieldUpdate).eq("id", leadId);
+      leadCaptured = true;
     }
 
     await logAIRun({
       agent: "Lead Intake Agent",
       input: messages,
-      output: { reply, extraction, leadCaptured },
+      output: { reply, extraction, leadCaptured, leadId, conversationComplete: extraction.readyToWrapUp },
       status: "completed",
       durationMs: Date.now() - startTime,
     });
 
-    return NextResponse.json({ success: true, reply, leadCaptured });
+    return NextResponse.json({ success: true, reply, leadCaptured, leadId, conversationComplete: extraction.readyToWrapUp });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Lead intake chat error:", error);
