@@ -1,6 +1,7 @@
 import "./marketing-theme.css";
 import Navbar from "@/components/marketing/layout/Navbar";
 import Footer from "@/components/marketing/layout/Footer";
+import ChatWidget from "@/components/marketing/chat/ChatWidget";
 
 export default function MarketingLayout({
   children,
@@ -12,6 +13,7 @@ export default function MarketingLayout({
       <Navbar />
       <main className="relative">{children}</main>
       <Footer />
+      <ChatWidget />
     </div>
   );
 }
