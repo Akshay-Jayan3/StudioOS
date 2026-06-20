@@ -1,3 +1,4 @@
+import Image from "next/image";
 import GradientHeadline from "../ui/GradientText";
 import GoldButton from "../ui/GoldButton";
 
@@ -6,10 +7,13 @@ export default function Hero() {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden py-8">
 
       {/* Background Image */}
-      <img
+      <Image
         src="/images/hero.png"
         alt="Luxury interior design"
-        className="absolute inset-0 w-full h-full object-cover"
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover"
       />
 
       {/* Dark overlay */}

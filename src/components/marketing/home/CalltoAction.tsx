@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import GoldButton from "../ui/GoldButton";
 
@@ -6,10 +7,12 @@ export default function CalltoAction() {
     <section className="relative py-40 overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0">
-        <img
+        <Image
           src="/images/cta-bg.png" // replace with a dramatic interior image
           alt="Luxury interior background"
-          className="w-full h-full object-cover"
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-black/40" />
       </div>

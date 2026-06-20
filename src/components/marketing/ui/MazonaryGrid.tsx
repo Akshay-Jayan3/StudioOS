@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type Props = {
   images: string[];
   direction: "up" | "down";
@@ -15,12 +17,15 @@ export default function MovingColumn({ images, direction, speed }: Props) {
         }}
       >
         {[...images, ...images].map((src, i) => (
-          <img
-            key={i}
-            src={src}
-            className="rounded-xl w-full object-cover"
-            alt=""
-          />
+          <div key={i} className="relative aspect-[4/5] w-full overflow-hidden rounded-xl">
+            <Image
+              src={src}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover"
+            />
+          </div>
         ))}
       </div>
     </div>

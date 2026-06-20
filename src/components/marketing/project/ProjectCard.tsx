@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type Props = {
   project: any;
 };
@@ -6,9 +8,11 @@ export default function ProjectCard({ project }: Props) {
   return (
     <div className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-black">
       {/* Image */}
-      <img
+      <Image
         src={project.image}
         alt={project.title}
+        fill
+        sizes="(max-width: 1024px) 100vw, 50vw"
         className="
           absolute inset-0 w-full h-full object-cover
           transition-transform duration-700 ease-out

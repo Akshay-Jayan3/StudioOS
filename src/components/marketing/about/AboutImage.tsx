@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+
+const MotionImage = motion(Image);
 
 export default function AboutRevealImage() {
   const ref = useRef(null);
@@ -30,11 +33,13 @@ export default function AboutRevealImage() {
         border border-white/10
       "
     >
-      <motion.img
+      <MotionImage
         src="/images/projects/1/interior-1.jpg" // replace with your image
         alt="Interior design studio work"
+        fill
+        sizes="100vw"
         style={{ scale, filter: brightness }}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="object-cover"
       />
 
       {/* Soft vignette */}
