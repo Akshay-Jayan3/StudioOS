@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { testimonialInputSchema, TestimonialInput, TestimonialOutput } from "@/agents/testimonial-agent/schema";
@@ -10,13 +10,25 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
 import { InlineCopyButton } from "@/components/agents/inline-copy-button";
-import { Loader2, MessageSquare, Mail, Users, HelpCircle } from "lucide-react";
+import { Loader2, MessageSquare, Mail, Users, HelpCircle, Save, Check } from "lucide-react";
 
 export function TestimonialAgent() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<TestimonialOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
+
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savedProjectName, setSavedProjectName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => setProjects([]));
+  }, []);
 
   const { register, handleSubmit } = useForm<TestimonialInput>({
     resolver: zodResolver(testimonialInputSchema),
@@ -42,10 +54,31 @@ export function TestimonialAgent() {
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
       setCompletedAt(new Date());
+      setSavedProjectName(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToProject = async () => {
+    if (!selectedProjectId || !output) return;
+    setSaving(true);
+    try {
+      const project = projects.find((p) => p.id === selectedProjectId);
+      const res = await fetch("/api/testimonials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: selectedProjectId,
+          client_name: project?.name || "Client",
+          request_message: output.testimonialRequest.message,
+        }),
+      });
+      if (res.ok) setSavedProjectName(project?.name || "project");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -105,6 +138,33 @@ export function TestimonialAgent() {
 
       {output && (
         <>
+          <Card className="bg-zinc-50 border-zinc-200">
+            <CardContent className="p-3">
+              {savedProjectName ? (
+                <div className="flex items-center gap-2 text-xs text-green-700">
+                  <Check className="w-3.5 h-3.5" /> Saved to {savedProjectName}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="flex-1 text-xs border border-zinc-200 rounded-md px-2 py-1.5 bg-white"
+                  >
+                    <option value="">Attach this to a project...</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 shrink-0" disabled={!selectedProjectId || saving} onClick={handleSaveToProject}>
+                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">

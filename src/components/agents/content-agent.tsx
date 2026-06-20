@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
 import { InlineCopyButton } from "@/components/agents/inline-copy-button";
+import { SaveToProjectPicker } from "@/components/agents/save-to-project-picker";
 import { Loader2, Camera, Link2, BookOpen } from "lucide-react";
 
 export function ContentAgent() {
@@ -132,6 +133,12 @@ export function ContentAgent() {
 
       {output && (
         <>
+          <SaveToProjectPicker
+            saveUrl={(id) => `/api/projects/${id}/save-content`}
+            payloadKey="content"
+            payload={output}
+          />
+
           {/* Project Story */}
           <Card className="border-zinc-900 bg-zinc-900 text-white">
             <CardContent className="p-5">

@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       project_id: body.project_id,
       client_name: body.client_name,
       status: "Requested",
+      request_message: body.request_message || null,
     })
     .select()
     .single();

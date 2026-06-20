@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Loader2, Check, Trash2, Upload, FileText, Image as ImageIcon, Ruler, Star, Eye } from "lucide-react";
+import { Plus, Loader2, Check, Trash2, Upload, FileText, Image as ImageIcon, Ruler, Star, Eye, Megaphone, Mail } from "lucide-react";
 import Link from "next/link";
 
 const fileTypeIcons: Record<string, any> = {
@@ -34,6 +34,8 @@ export default function ProjectDetailPage() {
   const [fileType, setFileType] = useState("inspiration");
   const [requestingTestimonial, setRequestingTestimonial] = useState(false);
   const [viewProposal, setViewProposal] = useState(false);
+  const [viewContent, setViewContent] = useState(false);
+  const [viewUpdate, setViewUpdate] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -313,6 +315,44 @@ export default function ProjectDetailPage() {
             </Card>
           )}
 
+          {project?.latest_content && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
+                  <Megaphone className="w-3.5 h-3.5" /> Marketing Content
+                </h3>
+                <p className="text-xs text-zinc-700 font-medium mb-1 line-clamp-1">{project.latest_content.caseStudy?.title}</p>
+                {project.latest_content_saved_at && (
+                  <p className="text-[10px] text-zinc-400 mb-3">
+                    Saved {new Date(project.latest_content_saved_at).toLocaleDateString()}
+                  </p>
+                )}
+                <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => setViewContent(true)}>
+                  <Eye className="w-3.5 h-3.5" /> View Content
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {project?.latest_update && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-xs font-semibold text-zinc-900 mb-3 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> Latest Client Update
+                </h3>
+                <p className="text-xs text-zinc-700 font-medium mb-1 line-clamp-1">{project.latest_update.subject}</p>
+                {project.latest_update_saved_at && (
+                  <p className="text-[10px] text-zinc-400 mb-3">
+                    Saved {new Date(project.latest_update_saved_at).toLocaleDateString()}
+                  </p>
+                )}
+                <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => setViewUpdate(true)}>
+                  <Eye className="w-3.5 h-3.5" /> View Update
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {project?.status === "Completed" && (
             <Card>
               <CardContent className="p-4">
@@ -326,6 +366,9 @@ export default function ProjectDetailPage() {
                     </span>
                     {testimonial.testimonial_text && (
                       <p className="text-xs text-zinc-600 mt-2 italic">"{testimonial.testimonial_text}"</p>
+                    )}
+                    {!testimonial.testimonial_text && testimonial.request_message && (
+                      <p className="text-xs text-zinc-500 mt-2 leading-relaxed line-clamp-3">{testimonial.request_message}</p>
                     )}
                   </div>
                 ) : (
@@ -410,6 +453,78 @@ export default function ProjectDetailPage() {
               </div>
 
               <p className="text-xs text-zinc-500 italic">{project.latest_proposal.closingNote}</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Saved Marketing Content */}
+      <Dialog open={viewContent} onOpenChange={setViewContent}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">{project?.latest_content?.caseStudy?.title}</DialogTitle>
+          </DialogHeader>
+          {project?.latest_content && (
+            <div className="space-y-4 mt-2">
+              <div className="bg-zinc-900 text-white rounded-md p-4">
+                <p className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">One-liner</p>
+                <p className="text-sm font-medium">{project.latest_content.projectStory?.oneLiner}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-1">The Brief</p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{project.latest_content.caseStudy?.problem}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-1">The Process</p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{project.latest_content.caseStudy?.process}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-1">The Outcome</p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{project.latest_content.caseStudy?.outcome}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-md p-3">
+                <p className="text-xs font-semibold text-zinc-500 mb-1 uppercase tracking-wide">Instagram Caption</p>
+                <p className="text-xs text-zinc-600 whitespace-pre-line">{project.latest_content.instagramCaption?.fullCaption}</p>
+              </div>
+              <div className="bg-zinc-50 rounded-md p-3">
+                <p className="text-xs font-semibold text-zinc-500 mb-1 uppercase tracking-wide">LinkedIn Post</p>
+                <p className="text-xs text-zinc-600 whitespace-pre-line">{project.latest_content.linkedinPost?.fullPost}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Saved Client Update */}
+      <Dialog open={viewUpdate} onOpenChange={setViewUpdate}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">{project?.latest_update?.subject}</DialogTitle>
+          </DialogHeader>
+          {project?.latest_update && (
+            <div className="space-y-4 mt-2">
+              <p className="text-sm text-zinc-700">{project.latest_update.weeklyUpdate?.greeting}</p>
+              <p className="text-sm text-zinc-700 leading-relaxed">{project.latest_update.weeklyUpdate?.progressSummary}</p>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-1">Accomplishments</p>
+                <ul className="space-y-1">
+                  {project.latest_update.weeklyUpdate?.accomplishments?.map((a: string, i: number) => (
+                    <li key={i} className="text-xs text-zinc-600">· {a}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-zinc-900 mb-1">Next Steps</p>
+                <ul className="space-y-1">
+                  {project.latest_update.weeklyUpdate?.nextSteps?.map((s: any, i: number) => (
+                    <li key={i} className="text-xs text-zinc-600">· {s.action} ({s.date}, {s.owner})</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                <p className="text-xs font-semibold text-green-700 mb-1 uppercase tracking-wide">WhatsApp Version</p>
+                <p className="text-xs text-zinc-700 whitespace-pre-line">{project.latest_update.whatsappVersion}</p>
+              </div>
             </div>
           )}
         </DialogContent>

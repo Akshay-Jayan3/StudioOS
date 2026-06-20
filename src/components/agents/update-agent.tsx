@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
 import { InlineCopyButton } from "@/components/agents/inline-copy-button";
+import { SaveToProjectPicker } from "@/components/agents/save-to-project-picker";
 import { Loader2, Mail, MessageSquare, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 
 export function UpdateAgent() {
@@ -138,6 +139,12 @@ export function UpdateAgent() {
 
       {output && (
         <>
+          <SaveToProjectPicker
+            saveUrl={(id) => `/api/projects/${id}/save-update`}
+            payloadKey="update"
+            payload={output}
+          />
+
           {/* Email Update */}
           <Card>
             <CardContent className="p-5">
