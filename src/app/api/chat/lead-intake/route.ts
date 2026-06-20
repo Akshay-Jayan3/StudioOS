@@ -29,7 +29,9 @@ export async function POST(req: NextRequest) {
       systemInstruction: leadIntakeSystemPrompt,
     });
 
-    const history = messages.slice(0, -1).map((m) => ({
+    const priorMessages = messages.slice(0, -1);
+    const firstUserIndex = priorMessages.findIndex((m) => m.role === "user");
+    const history = (firstUserIndex === -1 ? [] : priorMessages.slice(firstUserIndex)).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
