@@ -2,11 +2,14 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { discoverySystemPrompt } from "@/agents/discovery-agent/system-prompt";
 import { discoveryInputSchema, discoveryOutputSchema } from "@/agents/discovery-agent/schema";
+import { logAIRun } from "@/lib/log-ai-run";
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  let input: any;
   try {
     const body = await req.json();
-    const input = discoveryInputSchema.parse(body);
+    input = discoveryInputSchema.parse(body);
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
@@ -54,12 +57,25 @@ Return a JSON object with exactly this structure:
     const parsed = JSON.parse(jsonMatch[0]);
     const validated = discoveryOutputSchema.parse(parsed);
 
+    await logAIRun({
+      agent: "Discovery Agent",
+      input,
+      output: validated,
+      status: "completed",
+      durationMs: Date.now() - startTime,
+    });
+
     return NextResponse.json({ success: true, data: validated });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Discovery agent error:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
+    await logAIRun({
+      agent: "Discovery Agent",
+      input,
+      status: "failed",
+      error: errorMessage,
+      durationMs: Date.now() - startTime,
+    });
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }

@@ -7,7 +7,7 @@ export async function GET() {
     .from("ai_task_runs")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(1000);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
