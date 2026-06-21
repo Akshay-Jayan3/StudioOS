@@ -9,6 +9,7 @@ import Testimonials from "@/components/marketing/home/Testimonials";
 import Team from "@/components/marketing/home/Team";
 import CalltoAction from "@/components/marketing/home/CalltoAction";
 
+export const revalidate = 60; // refresh portfolio data every 60s without a redeploy
 
 export default function Home() {
   return (

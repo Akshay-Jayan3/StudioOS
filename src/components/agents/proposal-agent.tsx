@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
-import { Loader2, CheckCircle2, Sparkles, Save, Check } from "lucide-react";
+import { Loader2, CheckCircle2, Sparkles, Save, Check, ArrowRight, FolderPlus } from "lucide-react";
+import Link from "next/link";
 
 export type ProposalPrefill = Partial<{
   clientName: string;
@@ -62,6 +63,9 @@ export function ProposalAgent({ prefill }: { prefill?: ProposalPrefill } = {}) {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedProjectName, setSavedProjectName] = useState<string | null>(null);
+  const [lastInput, setLastInput] = useState<ProposalInput | null>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/projects")
@@ -108,11 +112,45 @@ export function ProposalAgent({ prefill }: { prefill?: ProposalPrefill } = {}) {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
+      setLastInput(data);
+      setCreatedProjectId(null);
       setCompletedAt(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!output || !lastInput) return;
+    setCreatingProject(true);
+    try {
+      const budgetNum = parseInt(output.pricing.totalEstimate.replace(/[^0-9]/g, ""), 10) || null;
+      const startDate = new Date().toISOString().split("T")[0];
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: lastInput.projectName,
+          status: "Discovery",
+          budget: budgetNum,
+          start_date: startDate,
+          description: `Client: ${lastInput.clientName}. ${output.executiveSummary || ""}`.slice(0, 500),
+        }),
+      });
+      if (res.ok) {
+        const project = await res.json();
+        setCreatedProjectId(project.id);
+        // Attach this proposal to the project it just created
+        await fetch(`/api/projects/${project.id}/save-proposal`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ proposal: output }),
+        });
+      }
+    } finally {
+      setCreatingProject(false);
     }
   };
 
@@ -219,7 +257,35 @@ export function ProposalAgent({ prefill }: { prefill?: ProposalPrefill } = {}) {
 
       {output && (
         <>
-          {/* Save to Project */}
+          {/* Create Project — the real next step once a proposal is ready */}
+          <Card className="border-zinc-900">
+            <CardContent className="p-4">
+              {createdProjectId ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <Check className="w-3.5 h-3.5" /> Project created and proposal attached
+                  </div>
+                  <Link href={`/admin/projects/${createdProjectId}`}>
+                    <Button size="sm" className="gap-1.5">
+                      Open Project <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-zinc-600">
+                    <FolderPlus className="w-3.5 h-3.5 text-zinc-400" />
+                    Client accepted? Create the project from this proposal.
+                  </div>
+                  <Button size="sm" className="gap-1.5 shrink-0" disabled={creatingProject} onClick={handleCreateProject}>
+                    {creatingProject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Create Project"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Save to Project (existing) */}
           <Card className="bg-zinc-50 border-zinc-200">
             <CardContent className="p-3">
               {savedProjectName ? (

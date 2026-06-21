@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DiscoveryAgent, DiscoveryPrefill } from "@/components/agents/discovery-agent";
 import { ProposalAgent, ProposalPrefill } from "@/components/agents/proposal-agent";
-import { ContentAgent } from "@/components/agents/content-agent";
+import { ContentAgent, ContentPrefill } from "@/components/agents/content-agent";
 import { UpdateAgent } from "@/components/agents/update-agent";
 import { TestimonialAgent } from "@/components/agents/testimonial-agent";
+import type { TestimonialInput, TestimonialOutput } from "@/agents/testimonial-agent/schema";
 import { Bot, Zap, Search, FileText, Megaphone, MessageSquare, Star, Loader2 } from "lucide-react";
 
 // hoursSavedPerTask is an estimate (manual task time this replaces), not measured.
@@ -38,17 +39,6 @@ const employees = [
     hoursSavedPerTask: 4,
   },
   {
-    id: "content",
-    agentKey: "Content Agent",
-    name: "Neha",
-    role: "Marketing Content Specialist",
-    icon: Megaphone,
-    description: "Turns completed projects into marketing assets. Creates case studies, Instagram captions, and LinkedIn posts from project notes.",
-    input: "Project photos description and notes",
-    output: "Case study, Instagram caption, LinkedIn post, project story",
-    hoursSavedPerTask: 2,
-  },
-  {
     id: "update",
     agentKey: "Update Agent",
     name: "Aryan",
@@ -69,6 +59,17 @@ const employees = [
     input: "Completed project details, client relationship notes",
     output: "Testimonial request email, WhatsApp version, referral follow-up",
     hoursSavedPerTask: 0.5,
+  },
+  {
+    id: "content",
+    agentKey: "Content Agent",
+    name: "Neha",
+    role: "Marketing Content Specialist",
+    icon: Megaphone,
+    description: "Turns completed, testimonial-confirmed projects into marketing assets. Creates case studies, Instagram captions, LinkedIn posts — and publishes straight to the portfolio.",
+    input: "Completed project details + Vikram's testimonial",
+    output: "Case study, Instagram caption, LinkedIn post, portfolio entry",
+    hoursSavedPerTask: 2,
   },
 ];
 
@@ -91,6 +92,7 @@ function AIEmployeesPageInner() {
   const [proposalPrefill, setProposalPrefill] = useState<ProposalPrefill | undefined>(undefined);
   const [discoveryPrefill, setDiscoveryPrefill] = useState<DiscoveryPrefill | undefined>(undefined);
   const [discoveryLeadId, setDiscoveryLeadId] = useState<string | undefined>(undefined);
+  const [contentPrefill, setContentPrefill] = useState<ContentPrefill | undefined>(undefined);
 
   useEffect(() => {
     fetch("/api/ai-runs")
@@ -252,21 +254,30 @@ function AIEmployeesPageInner() {
           </AgentWrapper>
         </TabsContent>
 
-        <TabsContent value="content">
-          <AgentWrapper employee={employeesWithStats[2]}>
-            <ContentAgent />
-          </AgentWrapper>
-        </TabsContent>
-
         <TabsContent value="update">
-          <AgentWrapper employee={employeesWithStats[3]}>
+          <AgentWrapper employee={employeesWithStats[2]}>
             <UpdateAgent />
           </AgentWrapper>
         </TabsContent>
 
         <TabsContent value="testimonial">
+          <AgentWrapper employee={employeesWithStats[3]}>
+            <TestimonialAgent
+              onGenerateCaseStudy={(input: TestimonialInput, output: TestimonialOutput) => {
+                setContentPrefill({
+                  projectName: input.projectName,
+                  clientProfile: `${input.clientName}. ${input.relationshipNotes || ""}`.trim(),
+                  keyFeatures: input.projectHighlights,
+                });
+                setActiveTab("content");
+              }}
+            />
+          </AgentWrapper>
+        </TabsContent>
+
+        <TabsContent value="content">
           <AgentWrapper employee={employeesWithStats[4]}>
-            <TestimonialAgent />
+            <ContentAgent prefill={contentPrefill} />
           </AgentWrapper>
         </TabsContent>
       </Tabs>

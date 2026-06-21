@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contentInputSchema, ContentInput, ContentOutput } from "@/agents/content-agent/schema";
@@ -11,15 +11,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
 import { InlineCopyButton } from "@/components/agents/inline-copy-button";
 import { SaveToProjectPicker } from "@/components/agents/save-to-project-picker";
-import { Loader2, Camera, Link2, BookOpen } from "lucide-react";
+import { Loader2, Camera, Link2, BookOpen, Sparkles, Globe, Check, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
-export function ContentAgent() {
+export type ContentPrefill = Partial<{
+  projectName: string;
+  clientProfile: string;
+  keyFeatures: string;
+}>;
+
+export function ContentAgent({ prefill }: { prefill?: ContentPrefill } = {}) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<ContentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
+  const [wasPrefilled, setWasPrefilled] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [lastInput, setLastInput] = useState<ContentInput | null>(null);
 
-  const { register, handleSubmit } = useForm<ContentInput>({
+  const { register, handleSubmit, setValue } = useForm<ContentInput>({
     resolver: zodResolver(contentInputSchema),
     defaultValues: {
       projectName: "Whitefield Penthouse",
@@ -34,10 +45,19 @@ export function ContentAgent() {
     },
   });
 
+  useEffect(() => {
+    if (!prefill) return;
+    if (prefill.projectName) setValue("projectName", prefill.projectName);
+    if (prefill.clientProfile) setValue("clientProfile", prefill.clientProfile);
+    if (prefill.keyFeatures) setValue("keyFeatures", prefill.keyFeatures);
+    setWasPrefilled(true);
+  }, [prefill, setValue]);
+
   const onSubmit = async (data: ContentInput) => {
     setLoading(true);
     setError(null);
     setOutput(null);
+    setPublished(false);
     try {
       const res = await fetch("/api/agents/content", {
         method: "POST",
@@ -47,6 +67,7 @@ export function ContentAgent() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
+      setLastInput(data);
       setCompletedAt(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -55,12 +76,43 @@ export function ContentAgent() {
     }
   };
 
+  const handlePublishToPortfolio = async () => {
+    if (!output || !lastInput) return;
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/portfolio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: output.caseStudy.title,
+          category: lastInput.projectType,
+          description: output.projectStory.threeLineSummary,
+          problem: output.caseStudy.problem,
+          process_text: output.caseStudy.process,
+          outcome: output.caseStudy.outcome,
+          designer_quote: output.caseStudy.designerQuote,
+          tags: output.caseStudy.tags,
+          published: false,
+          featured: false,
+        }),
+      });
+      if (res.ok) setPublished(true);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const status = loading ? "loading" : error ? "error" : output ? "success" : "idle";
 
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* LEFT: Form */}
-      <div className="sticky top-6 self-start">
+      <div className="sticky top-6 self-start space-y-3">
+      {wasPrefilled && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md text-xs text-blue-700">
+          <Sparkles className="w-3.5 h-3.5" /> Pre-filled from Vikram's testimonial
+        </div>
+      )}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-zinc-900">Project Details</CardTitle>
@@ -133,6 +185,34 @@ export function ContentAgent() {
 
       {output && (
         <>
+          {/* Publish to Portfolio — this is the real action: case study becomes a live DB record */}
+          <Card className="border-zinc-900">
+            <CardContent className="p-4">
+              {published ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <Check className="w-3.5 h-3.5" /> Added to Portfolio (unpublished draft)
+                  </div>
+                  <Link href="/admin/portfolio">
+                    <Button size="sm" className="gap-1.5">
+                      Add Photos & Publish <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-zinc-600">
+                    <Globe className="w-3.5 h-3.5 text-zinc-400" />
+                    Add this case study to the public portfolio (saved as draft for review).
+                  </div>
+                  <Button size="sm" className="gap-1.5 shrink-0" disabled={publishing} onClick={handlePublishToPortfolio}>
+                    {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Publish to Portfolio"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <SaveToProjectPicker
             saveUrl={(id) => `/api/projects/${id}/save-content`}
             payloadKey="content"

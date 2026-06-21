@@ -1,9 +1,41 @@
 import Section from "../ui/Section";
-import { projects } from "@/lib/marketing-data/projects";
+import { projects as fallbackProjects } from "@/lib/marketing-data/projects";
 import ProjectCard from "../project/ProjectCard";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 
-export default function FeaturedProjects() {
+async function getFeaturedProjects() {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+    const { data, error } = await supabase
+      .from("portfolio_projects")
+      .select("*")
+      .eq("published", true)
+      .order("display_order", { ascending: true });
+
+    if (error || !data || data.length === 0) throw new Error("no data");
+
+    return data
+      .filter((p: any) => p.featured)
+      .concat(data.filter((p: any) => !p.featured))
+      .slice(0, 4)
+      .map((p: any) => ({
+        slug: p.slug,
+        title: p.title,
+        location: p.location,
+        category: p.category,
+        image: p.image_url,
+      }));
+  } catch {
+    return fallbackProjects;
+  }
+}
+
+export default async function FeaturedProjects() {
+  const projects = await getFeaturedProjects();
   const [first, second, third, fourth] = projects;
 
   return (

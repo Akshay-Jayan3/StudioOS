@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { updateSystemPrompt } from "@/agents/update-agent/system-prompt";
 import { updateInputSchema, updateOutputSchema } from "@/agents/update-agent/schema";
@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     input = updateInputSchema.parse(body);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL!,
-      systemInstruction: updateSystemPrompt,
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
     const prompt = `Generate a weekly project update for the following project.
 
@@ -49,8 +45,12 @@ Return a JSON object with exactly this structure:
   "whatsappVersion": "short 3-5 line WhatsApp friendly version of the update"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL!,
+      contents: prompt,
+      config: { systemInstruction: updateSystemPrompt },
+    });
+    const text = result.text || "";
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON found in response");

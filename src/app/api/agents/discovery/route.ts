@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { discoverySystemPrompt } from "@/agents/discovery-agent/system-prompt";
 import { discoveryInputSchema, discoveryOutputSchema } from "@/agents/discovery-agent/schema";
@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     input = discoveryInputSchema.parse(body);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL!,
-      systemInstruction: discoverySystemPrompt,
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
     const prompt = `Analyze the following client discovery questionnaire and produce a structured project brief.
 
@@ -48,8 +44,12 @@ Return a JSON object with exactly this structure:
   "designerNotes": "internal notes for the design team"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL!,
+      contents: prompt,
+      config: { systemInstruction: discoverySystemPrompt },
+    });
+    const text = result.text || "";
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON found in response");

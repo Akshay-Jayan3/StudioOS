@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   LogOut,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ const nav = [
   { label: "Leads", href: "/admin/leads", icon: Users },
   { label: "Clients", href: "/admin/clients", icon: UserCheck },
   { label: "Projects", href: "/admin/projects", icon: FolderKanban },
+  { label: "Portfolio", href: "/admin/portfolio", icon: ImageIcon },
   { label: "AI Employees", href: "/admin/ai-employees", icon: Bot },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
   { label: "Settings", href: "/admin/settings", icon: Settings },

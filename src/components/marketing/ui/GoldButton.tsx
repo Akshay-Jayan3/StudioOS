@@ -1,7 +1,15 @@
 export default function GoldButton({
   children,
+  type = "button",
+  onClick,
+  disabled,
+  className,
 }: {
   children: React.ReactNode;
+  type?: "button" | "submit" | "reset";
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
 }) {
   return (
     <div className="relative inline-flex items-center justify-center w-full sm:w-auto">
@@ -18,15 +26,18 @@ export default function GoldButton({
 
       {/* BUTTON */}
       <button
-        className="
+        type={type}
+        onClick={onClick}
+        disabled={disabled}
+        className={`
           relative z-10
-          
+
           /* Responsive sizing */
           px-6 sm:px-8 md:px-10 lg:px-6
           py-3 sm:py-3.5 md:py-3
-          
+
           text-sm sm:text-base md:text-md
-          
+
           rounded-md
           font-medium
           text-black
@@ -38,7 +49,9 @@ export default function GoldButton({
           hover:scale-[1.03]
           hover:shadow-[0_0_70px_rgba(212,175,55,0.75)]
           active:scale-[0.98]
-        "
+          disabled:opacity-50 disabled:hover:scale-100
+          ${className || ""}
+        `}
       >
         {/* INNER GLASS HIGHLIGHT */}
         <span

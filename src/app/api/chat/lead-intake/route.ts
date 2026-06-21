@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { leadIntakeSystemPrompt } from "@/agents/lead-intake-agent/system-prompt";
@@ -29,14 +29,9 @@ export async function POST(req: NextRequest) {
     messages = parsed.messages;
     const existingLeadId: string | undefined = body.leadId || undefined;
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
     // 1. Conversational reply
-    const chatModel = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL!,
-      systemInstruction: leadIntakeSystemPrompt,
-    });
-
     const priorMessages = messages.slice(0, -1);
     const firstUserIndex = priorMessages.findIndex((m) => m.role === "user");
     const history = (firstUserIndex === -1 ? [] : priorMessages.slice(firstUserIndex)).map((m) => ({
@@ -45,14 +40,15 @@ export async function POST(req: NextRequest) {
     }));
     const lastMessage = messages[messages.length - 1].content;
 
-    const chat = chatModel.startChat({ history });
-    const chatResult = await chat.sendMessage(lastMessage);
-    const reply = chatResult.response.text();
+    const chat = ai.chats.create({
+      model: process.env.GEMINI_MODEL!,
+      config: { systemInstruction: leadIntakeSystemPrompt },
+      history,
+    });
+    const chatResult = await chat.sendMessage({ message: lastMessage });
+    const reply = chatResult.text || "";
 
     // 2. Extraction — pull whatever structured info is present so far
-    const extractionModel = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL!,
-    });
     const transcript = [...messages, { role: "assistant" as const, content: reply }]
       .map((m) => `${m.role === "user" ? "Visitor" : "Nila"}: ${m.content}`)
       .join("\n");
@@ -86,8 +82,11 @@ Return JSON exactly in this shape:
   "notes": "any other useful context, or omit"
 }`;
 
-    const extractionResult = await extractionModel.generateContent(extractionPrompt);
-    const extractionText = extractionResult.response.text();
+    const extractionResult = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL!,
+      contents: extractionPrompt,
+    });
+    const extractionText = extractionResult.text || "";
     const jsonMatch = extractionText.match(/\{[\s\S]*\}/);
     let extraction = { hasEnoughInfo: false, readyToWrapUp: false } as ReturnType<typeof leadExtractionSchema.parse>;
 

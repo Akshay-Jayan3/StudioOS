@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 type Props = {
   project: any;
@@ -6,7 +7,7 @@ type Props = {
 
 export default function ProjectCard({ project }: Props) {
   return (
-    <div className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-black">
+    <Link href={`/projects/${project.slug}`} className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-black block">
       {/* Image */}
       <Image
         src={project.image}
@@ -49,6 +50,6 @@ export default function ProjectCard({ project }: Props) {
           {project.location}
         </p>
       </div>
-    </div>
+    </Link>
   );
 }

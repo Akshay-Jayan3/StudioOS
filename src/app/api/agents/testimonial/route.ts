@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { testimonialSystemPrompt } from "@/agents/testimonial-agent/system-prompt";
 import { testimonialInputSchema, testimonialOutputSchema } from "@/agents/testimonial-agent/schema";
@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     input = testimonialInputSchema.parse(body);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL!,
-      systemInstruction: testimonialSystemPrompt,
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
     const prompt = `Create a testimonial request for this completed project.
 
@@ -38,8 +34,12 @@ Return a JSON object with exactly this structure:
   "suggestedQuestions": ["question to help the client write a more specific testimonial"]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL!,
+      contents: prompt,
+      config: { systemInstruction: testimonialSystemPrompt },
+    });
+    const text = result.text || "";
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON found in response");

@@ -6,7 +6,7 @@ import { useRef } from "react";
 
 const MotionImage = motion(Image);
 
-export default function AboutRevealImage() {
+export default function AboutRevealImage({ src = "/images/projects/living-room.png" }: { src?: string }) {
   const ref = useRef(null);
 
   const { scrollYProgress } = useScroll({
@@ -34,7 +34,7 @@ export default function AboutRevealImage() {
       "
     >
       <MotionImage
-        src="/images/projects/1/interior-1.jpg" // replace with your image
+        src={src}
         alt="Interior design studio work"
         fill
         sizes="100vw"

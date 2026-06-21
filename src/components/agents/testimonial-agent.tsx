@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AgentStatusBanner } from "@/components/agents/agent-status-banner";
 import { InlineCopyButton } from "@/components/agents/inline-copy-button";
-import { Loader2, MessageSquare, Mail, Users, HelpCircle, Save, Check } from "lucide-react";
+import { Loader2, MessageSquare, Mail, Users, HelpCircle, Save, Check, ArrowRight, Sparkles } from "lucide-react";
+import Link from "next/link";
 
-export function TestimonialAgent() {
+export function TestimonialAgent({ onGenerateCaseStudy }: { onGenerateCaseStudy?: (input: TestimonialInput, output: TestimonialOutput) => void } = {}) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<TestimonialOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +23,7 @@ export function TestimonialAgent() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedProjectName, setSavedProjectName] = useState<string | null>(null);
+  const [lastInput, setLastInput] = useState<TestimonialInput | null>(null);
 
   useEffect(() => {
     fetch("/api/projects")
@@ -53,6 +55,7 @@ export function TestimonialAgent() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setOutput(json.data);
+      setLastInput(data);
       setCompletedAt(new Date());
       setSavedProjectName(null);
     } catch (e) {
@@ -141,8 +144,17 @@ export function TestimonialAgent() {
           <Card className="bg-zinc-50 border-zinc-200">
             <CardContent className="p-3">
               {savedProjectName ? (
-                <div className="flex items-center gap-2 text-xs text-green-700">
-                  <Check className="w-3.5 h-3.5" /> Saved to {savedProjectName}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <Check className="w-3.5 h-3.5" /> Saved to {savedProjectName}
+                  </div>
+                  {selectedProjectId && (
+                    <Link href={`/admin/projects/${selectedProjectId}`}>
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                        View Project <ArrowRight className="w-3 h-3" />
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -219,6 +231,22 @@ export function TestimonialAgent() {
               <p className="text-xs text-zinc-600 leading-relaxed whitespace-pre-line">{output.referralFollowUp.message}</p>
             </CardContent>
           </Card>
+
+          {onGenerateCaseStudy && lastInput && (
+            <Card className="border-zinc-900">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-zinc-600">
+                    <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
+                    Project wrapped up — ready to turn this into marketing content?
+                  </div>
+                  <Button size="sm" className="gap-1.5 shrink-0" onClick={() => onGenerateCaseStudy(lastInput, output)}>
+                    Generate Case Study <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
       </div>

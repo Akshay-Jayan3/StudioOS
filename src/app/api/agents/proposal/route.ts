@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { proposalSystemPrompt } from "@/agents/proposal-agent/system-prompt";
 import { proposalInputSchema, proposalOutputSchema } from "@/agents/proposal-agent/schema";
@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     input = proposalInputSchema.parse(body);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL!,
-      systemInstruction: proposalSystemPrompt,
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
     const prompt = `Create a detailed proposal for the following interior design project.
 
@@ -50,8 +46,12 @@ Return a JSON object with exactly this structure:
   "closingNote": "warm closing paragraph"
 }`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL!,
+      contents: prompt,
+      config: { systemInstruction: proposalSystemPrompt },
+    });
+    const text = result.text || "";
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON found in response");
