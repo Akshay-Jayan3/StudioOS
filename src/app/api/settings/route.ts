@@ -13,7 +13,7 @@ export async function GET() {
   const supabase = getClient();
   const { data, error } = await supabase
     .from("site_settings")
-    .select("studio_name, location, contact_email")
+    .select("studio_name, location, contact_email, phone")
     .eq("id", "default")
     .single();
 
@@ -22,6 +22,7 @@ export async function GET() {
       studio_name: "Datrium",
       location: "Kerala, India",
       contact_email: "hello@datrium.in",
+      phone: "+91 98765 43210",
     });
   }
   return NextResponse.json(data);
@@ -37,6 +38,7 @@ export async function PATCH(req: NextRequest) {
       studio_name: body.studio_name,
       location: body.location,
       contact_email: body.contact_email,
+      phone: body.phone,
       updated_at: new Date().toISOString(),
     })
     .eq("id", "default")

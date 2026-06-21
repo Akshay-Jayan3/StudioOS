@@ -5,12 +5,14 @@ export type SiteSettings = {
   studio_name: string;
   location: string;
   contact_email: string;
+  phone: string;
 };
 
 const DEFAULTS: SiteSettings = {
   studio_name: "Datrium",
   location: "Kerala, India",
   contact_email: "hello@datrium.in",
+  phone: "+91 98765 43210",
 };
 
 async function fetchSiteSettings(): Promise<SiteSettings> {
@@ -21,7 +23,7 @@ async function fetchSiteSettings(): Promise<SiteSettings> {
     );
     const { data, error } = await supabase
       .from("site_settings")
-      .select("studio_name, location, contact_email")
+      .select("studio_name, location, contact_email, phone")
       .eq("id", "default")
       .single();
 

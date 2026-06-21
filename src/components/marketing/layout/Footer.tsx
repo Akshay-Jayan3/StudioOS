@@ -13,10 +13,15 @@ import {
 export default function Footer({
   studioName = "Datrium",
   contactEmail = "hello@datrium.in",
+  phone = "+91 98765 43210",
+  location = "Kochi, Kerala",
 }: {
   studioName?: string;
   contactEmail?: string;
+  phone?: string;
+  location?: string;
 }) {
+  const phoneHref = `tel:${phone.replace(/[^\d+]/g, "")}`;
   return (
     <footer className="bg-glass-bg border-t border-border backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 py-24">
@@ -71,12 +76,12 @@ export default function Footer({
             <ul className="mt-6 space-y-4 text-sm text-muted">
               <li className="flex items-start gap-3">
                 <MapPin size={16} className="mt-1 text-gold" />
-                Kochi, Kerala
+                {location}
               </li>
               <li className="flex items-start gap-3">
                 <Phone size={16} className="mt-1 text-gold" />
-                <a href="tel:+919876543210" className="hover:text-gold">
-                  +91 98765 43210
+                <a href={phoneHref} className="hover:text-gold">
+                  {phone}
                 </a>
               </li>
               <li className="flex items-start gap-3">

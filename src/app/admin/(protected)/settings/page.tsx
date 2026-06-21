@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Check } from "lucide-react";
 
 export default function SettingsPage() {
-  const [form, setForm] = useState({ studio_name: "", location: "", contact_email: "" });
+  const [form, setForm] = useState({ studio_name: "", location: "", contact_email: "", phone: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -77,6 +77,14 @@ export default function SettingsPage() {
                   <Input
                     value={form.contact_email}
                     onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-zinc-700 mb-1 block">Phone</label>
+                  <Input
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="text-sm"
                   />
                 </div>

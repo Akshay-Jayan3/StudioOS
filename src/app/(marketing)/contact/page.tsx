@@ -44,7 +44,7 @@ export default async function ContactPage() {
             <Phone className="w-4 h-4 text-gold mt-1" />
             <div>
               <p className="text-sm text-white">Phone</p>
-              <p className="text-sm text-white/50">+91 98765 43210</p>
+              <p className="text-sm text-white/50">{settings.phone}</p>
             </div>
           </div>
           <div className="flex items-start gap-3">

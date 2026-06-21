@@ -15,7 +15,12 @@ export default async function MarketingLayout({
     <div className="marketing-theme">
       <Navbar studioName={settings.studio_name} />
       <main className="relative">{children}</main>
-      <Footer studioName={settings.studio_name} contactEmail={settings.contact_email} />
+      <Footer
+        studioName={settings.studio_name}
+        contactEmail={settings.contact_email}
+        phone={settings.phone}
+        location={settings.location}
+      />
       <ChatWidget studioName={settings.studio_name} />
     </div>
   );

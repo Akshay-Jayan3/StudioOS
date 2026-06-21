@@ -29,10 +29,10 @@ export default function AboutSection() {
           {/* RIGHT — Studio Credentials */}
           <div className="grid grid-cols-2 gap-10">
 
-            <StatCard number="24" label="Years of experience in interior design" highlight/>
-            <StatCard number="140+" label="Successfully completed projects" highlight />
-            <StatCard number="100+" label="Interior design and architecture experts" highlight/>
-            <StatCard number="12" label="Awards for excellence in interior design" highlight/>
+            <StatCard number="8" label="Years of experience in interior design" highlight/>
+            <StatCard number="40+" label="Successfully completed projects" highlight />
+            <StatCard number="15+" label="Interior design and architecture experts" highlight/>
+            <StatCard number="6" label="Awards for excellence in interior design" highlight/>
 
           </div>
         </div>
