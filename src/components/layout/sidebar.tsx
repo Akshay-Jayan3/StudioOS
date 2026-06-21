@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -33,6 +34,17 @@ const nav = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? null);
+    });
+  }, []);
+
+  const displayName = email ? email.split("@")[0] : "—";
+  const initial = displayName.charAt(0).toUpperCase();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -79,11 +91,11 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-zinc-200">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-full bg-zinc-200 flex items-center justify-center text-xs font-medium text-zinc-600">
-            A
+            {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-zinc-900 truncate">Ananya S.</p>
-            <p className="text-[10px] text-zinc-400 truncate">Lead Designer</p>
+            <p className="text-xs font-medium text-zinc-900 truncate">{displayName}</p>
+            <p className="text-[10px] text-zinc-400 truncate">{email || "Not signed in"}</p>
           </div>
           <button onClick={handleSignOut} className="text-zinc-400 hover:text-zinc-700" title="Sign out">
             <LogOut className="w-4 h-4" />
