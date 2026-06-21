@@ -10,7 +10,13 @@ import {
   Clock,
 } from "lucide-react";
 
-export default function Footer() {
+export default function Footer({
+  studioName = "Datrium",
+  contactEmail = "hello@datrium.in",
+}: {
+  studioName?: string;
+  contactEmail?: string;
+}) {
   return (
     <footer className="bg-glass-bg border-t border-border backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 py-24">
@@ -20,7 +26,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <Link href="/" className="flex items-center gap-2">
               <span className="uppercase font-bold tracking-widest text-lg text-gold">
-                Nilo Interiors
+                {studioName}
               </span>
             </Link>
 
@@ -75,8 +81,8 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-3">
                 <Mail size={16} className="mt-1 text-gold" />
-                <a href="mailto:studio@email.com" className="hover:text-gold">
-                  studio@email.com
+                <a href={`mailto:${contactEmail}`} className="hover:text-gold">
+                  {contactEmail}
                 </a>
               </li>
               <li className="flex items-start gap-3">
@@ -91,7 +97,7 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-border">
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between gap-4 text-xs text-muted">
-          <p>© {new Date().getFullYear()} Nilaya. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {studioName}. All rights reserved.</p>
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-gold">Privacy</Link>
             <Link href="/terms" className="hover:text-gold">Terms</Link>

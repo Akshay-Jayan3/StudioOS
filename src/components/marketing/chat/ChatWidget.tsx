@@ -10,7 +10,7 @@ const GREETING: Message = {
   content: "Hi! I'm Nila from the studio. Tell me a bit about what you're looking to do with your space?",
 };
 
-export default function ChatWidget() {
+export default function ChatWidget({ studioName = "Datrium" }: { studioName?: string }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [input, setInput] = useState("");
@@ -64,7 +64,7 @@ export default function ChatWidget() {
               <div className="w-7 h-7 rounded-full bg-[#d4af37] flex items-center justify-center text-xs font-bold text-black">N</div>
               <div>
                 <p className="text-sm font-medium text-[#f6f3ee]">Nila</p>
-                <p className="text-[10px] text-[#bdb8b0]">Nilaya Interiors</p>
+                <p className="text-[10px] text-[#bdb8b0]">{studioName}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

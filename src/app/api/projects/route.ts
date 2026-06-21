@@ -13,7 +13,7 @@ export async function GET() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
-    .select("*, clients(name, email)")
+    .select("*, clients(name, email), leads(name, source)")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

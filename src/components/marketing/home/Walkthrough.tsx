@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -8,100 +9,59 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const FRAME_COUNT = 120;
-const FRAME_PATH = (i: number) =>
-  `/images/sequence/frame-${i.toString().padStart(4, "0")}.jpg`;
+const IMAGE_SRC = "/images/projects/living-room.png";
+const KICKER = "How We Begin";
+const CAPTION = "Every project starts with light.";
+const SUB =
+  "We study how it enters before we touch a single surface — the hour it arrives, the angle it falls, the shadows it leaves behind. Once that's understood, everything else follows.";
 
-const OVERLAYS: { text: string; range: [number, number] }[] = [
-  { text: "Every project starts with light.", range: [0, 0.22] },
-  { text: "Where it falls. How it moves through a room.", range: [0.38, 0.6] },
-  { text: "The design follows from there.", range: [0.76, 0.98] },
-];
+const SCALE_START = 0.5;
+const RADIUS_START = 32;
+const EXPAND_END = 0.55; // fraction of scroll spent expanding the image to full bleed; text appears after this
+
+// easeInOutCubic — slow start, fast middle, slow finish.
+function ease(t: number): number {
+  const clamped = Math.max(0, Math.min(1, t));
+  return clamped < 0.5
+    ? 4 * clamped * clamped * clamped
+    : 1 - Math.pow(-2 * clamped + 2, 3) / 2;
+}
 
 export default function Walkthrough() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const imagesRef = useRef<HTMLImageElement[]>([]);
-  const overlayRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const imageRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const rawProgress = useRef(0);
+  const smoothProgress = useRef(0);
+  const rafId = useRef<number | null>(null);
 
   useEffect(() => {
-    let loadedCount = 0;
-    const images: HTMLImageElement[] = [];
-
-    for (let i = 1; i <= FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = FRAME_PATH(i);
-      img.onload = () => {
-        loadedCount++;
-        if (loadedCount === FRAME_COUNT) setLoaded(true);
-      };
-      images.push(img);
-    }
-    imagesRef.current = images;
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-
-    const canvas = canvasRef.current;
     const container = containerRef.current;
-    if (!canvas || !container) return;
+    const image = imageRef.current;
+    const text = textRef.current;
+    if (!container || !image || !text) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const render = (progress: number) => {
+      let scale: number;
+      let radius: number;
+      let textOpacity: number;
 
-    const render = (frameIndex: number) => {
-      const img = imagesRef.current[frameIndex];
-      if (!img || !img.complete) return;
-
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-
-      const canvasRatio = rect.width / rect.height;
-      const imgRatio = img.width / img.height;
-      let drawWidth, drawHeight, offsetX, offsetY;
-
-      if (imgRatio > canvasRatio) {
-        drawHeight = rect.height;
-        drawWidth = drawHeight * imgRatio;
-        offsetX = (rect.width - drawWidth) / 2;
-        offsetY = 0;
+      if (progress < EXPAND_END) {
+        // Phase 1: image expands from a small centered card to full bleed; text stays hidden
+        const local = ease(progress / EXPAND_END);
+        scale = SCALE_START + local * (1 - SCALE_START);
+        radius = RADIUS_START * (1 - local);
+        textOpacity = 0;
       } else {
-        drawWidth = rect.width;
-        drawHeight = drawWidth / imgRatio;
-        offsetX = 0;
-        offsetY = (rect.height - drawHeight) / 2;
+        // Phase 2: image is full screen; text fades in over it
+        scale = 1;
+        radius = 0;
+        textOpacity = ease((progress - EXPAND_END) / (1 - EXPAND_END || 1));
       }
 
-      ctx.clearRect(0, 0, rect.width, rect.height);
-      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-    };
-
-    const updateOverlays = (progress: number) => {
-      OVERLAYS.forEach((overlay, i) => {
-        const el = overlayRefs.current[i];
-        if (!el) return;
-
-        const [start, end] = overlay.range;
-        const fadeIn = 0.05;
-        let o = 0;
-        if (progress >= start && progress <= end) {
-          if (progress < start + fadeIn) {
-            o = (progress - start) / fadeIn;
-          } else if (progress > end - fadeIn) {
-            o = (end - progress) / fadeIn;
-          } else {
-            o = 1;
-          }
-        }
-        el.style.opacity = String(Math.max(0, Math.min(1, o)));
-      });
+      image.style.transform = `scale(${scale})`;
+      image.style.borderRadius = `${radius}px`;
+      text.style.opacity = String(textOpacity);
     };
 
     render(0);
@@ -112,65 +72,61 @@ export default function Walkthrough() {
       end: "bottom bottom",
       scrub: true,
       onUpdate: (self) => {
-        const frameIndex = Math.min(
-          FRAME_COUNT - 1,
-          Math.floor(self.progress * FRAME_COUNT)
-        );
-        render(frameIndex);
-        updateOverlays(self.progress);
+        rawProgress.current = self.progress;
       },
     });
 
-    const onResize = () => {
-      const frame =
-        Math.round((trigger.progress || 0) * (FRAME_COUNT - 1)) || 0;
-      render(frame);
+    // Ease smoothProgress toward rawProgress every frame rather than snapping —
+    // this is what removes the "sudden" feel from fast or jittery scroll input.
+    const tick = () => {
+      const delta = rawProgress.current - smoothProgress.current;
+      smoothProgress.current += delta * 0.06;
+      if (Math.abs(delta) < 0.0005) smoothProgress.current = rawProgress.current;
+      render(smoothProgress.current);
+      rafId.current = requestAnimationFrame(tick);
     };
-    window.addEventListener("resize", onResize);
+    rafId.current = requestAnimationFrame(tick);
 
     return () => {
       trigger.kill();
-      window.removeEventListener("resize", onResize);
+      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
     };
-  }, [loaded]);
+  }, []);
 
   return (
-    <section
-      ref={containerRef}
-      className="relative"
-      style={{ height: "400vh" }}
-    >
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 h-full w-full"
-        />
-
-        {/* Vignette for text legibility */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/40 pointer-events-none" />
-
-        {/* Text overlays synced to scroll progress */}
-        <div className="absolute inset-0 pointer-events-none">
-          {OVERLAYS.map((overlay, i) => (
-            <div
-              key={overlay.text}
-              ref={(el) => {
-                overlayRefs.current[i] = el;
-              }}
-              className="absolute left-[8%] right-[8%] bottom-[15%] max-w-2xl opacity-0 transition-opacity duration-100 ease-linear"
-            >
-              <p className="text-[clamp(28px,4vw,56px)] leading-[1.1] tracking-tight text-foreground italic">
-                {overlay.text}
-              </p>
-            </div>
-          ))}
+    <section ref={containerRef} className="relative" style={{ height: "180vh" }}>
+      <div className="sticky top-0 h-screen w-full overflow-hidden bg-background">
+        {/* Image — zooms in from a small centered card to fill the screen */}
+        <div
+          ref={imageRef}
+          className="absolute inset-0 overflow-hidden will-change-transform"
+          style={{ transform: `scale(${SCALE_START})`, borderRadius: `${RADIUS_START}px` }}
+        >
+          <Image
+            src={IMAGE_SRC}
+            alt={CAPTION}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
         </div>
 
-        {!loaded && (
-          <div className="absolute inset-0 flex items-center justify-center font-mono text-xs tracking-[0.2em] text-muted">
-            LOADING
+        {/* Vignette for text legibility once it appears over the full-bleed image */}
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+
+        {/* Text — appears centered over the image once it has reached full bleed */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center px-6">
+          <div ref={textRef} className="max-w-xl text-center" style={{ opacity: 0 }}>
+            <span className="text-sm tracking-[0.18em] uppercase text-gold-muted mb-4 block">
+              {KICKER}
+            </span>
+            <p className="text-[clamp(26px,3.4vw,44px)] leading-[1.15] tracking-tight text-foreground italic mb-4">
+              {CAPTION}
+            </p>
+            <p className="text-base md:text-lg text-muted leading-relaxed">{SUB}</p>
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

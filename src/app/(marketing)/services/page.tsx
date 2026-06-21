@@ -3,11 +3,16 @@ import ServiceItem from "@/components/marketing/ui/ServicesItem";
 import GoldButton from "@/components/marketing/ui/GoldButton";
 import { services } from "@/lib/marketing-data/services";
 import Link from "next/link";
+import { getSiteSettings } from "@/lib/site-settings";
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: "Services — Nilaya Interiors",
-  description: "Full-service interior design, turnkey execution, design consultation, and styling.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  return {
+    title: `Services — ${settings.studio_name}`,
+    description: "Full-service interior design, turnkey execution, design consultation, and styling.",
+  };
+}
 
 export default function ServicesPage() {
   return (

@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
 
-export default function Navbar() {
+export default function Navbar({ studioName = "Datrium" }: { studioName?: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -16,7 +16,7 @@ export default function Navbar() {
             href="/"
             className="flex items-center gap-2 text-gold font-bold text-lg uppercase"
           >
-            Nilo Interiors
+            {studioName}
           </Link>
 
 

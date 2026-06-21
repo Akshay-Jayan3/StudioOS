@@ -1,6 +1,7 @@
 import Section from "../ui/Section";
 import { projects as fallbackProjects } from "@/lib/marketing-data/projects";
 import ProjectCard from "../project/ProjectCard";
+import RevealOnScroll from "../ui/RevealOnScroll";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -39,35 +40,36 @@ export default async function FeaturedProjects() {
   const [first, second, third, fourth] = projects;
 
   return (
+    <div className="pt-20 md:pt-32">
     <Section label="Portfolio" title="Selected Works">
       <div className="space-y-6">
         {/* Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 auto-rows-[420px]">
           {first && (
-            <div className="lg:col-span-2 h-full">
+            <RevealOnScroll delay={0} className="lg:col-span-2 h-full">
               <ProjectCard project={first} />
-            </div>
+            </RevealOnScroll>
           )}
 
           {second && (
-            <div className="lg:col-span-1 h-full">
+            <RevealOnScroll delay={120} className="lg:col-span-1 h-full">
               <ProjectCard project={second} />
-            </div>
+            </RevealOnScroll>
           )}
         </div>
 
         {/* Row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 auto-rows-[420px]">
           {third && (
-            <div className="lg:col-span-1 h-full">
+            <RevealOnScroll delay={0} className="lg:col-span-1 h-full">
               <ProjectCard project={third} />
-            </div>
+            </RevealOnScroll>
           )}
 
           {fourth && (
-            <div className="lg:col-span-2 h-full">
+            <RevealOnScroll delay={120} className="lg:col-span-2 h-full">
               <ProjectCard project={fourth} />
-            </div>
+            </RevealOnScroll>
           )}
         </div>
       </div>
@@ -87,5 +89,6 @@ export default async function FeaturedProjects() {
         </Link>
       </div>
     </Section>
+    </div>
   );
 }

@@ -25,17 +25,21 @@ const statusOrder = ["Discovery", "Design", "Approval", "Execution", "Completed"
 type AddProjectForm = {
   name: string;
   client_id: string;
+  lead_id: string;
   status: string;
   start_date: string;
   end_date: string;
   budget: string;
   designer: string;
+  location: string;
+  category: string;
   description: string;
 };
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [usingMock, setUsingMock] = useState(false);
   const [open, setOpen] = useState(false);
@@ -48,6 +52,7 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetchProjects();
     fetchClients();
+    fetchLeads();
   }, []);
 
   async function fetchProjects() {
@@ -78,6 +83,15 @@ export default function ProjectsPage() {
     }
   }
 
+  async function fetchLeads() {
+    try {
+      const res = await fetch("/api/leads");
+      if (res.ok) setLeads(await res.json());
+    } catch {
+      // ignore, mock mode
+    }
+  }
+
   async function onSubmit(data: AddProjectForm) {
     setSaving(true);
     try {
@@ -88,6 +102,7 @@ export default function ProjectsPage() {
           ...data,
           budget: data.budget ? parseFloat(data.budget) * 100000 : null,
           client_id: data.client_id || null,
+          lead_id: data.lead_id || null,
         }),
       });
       if (res.ok) {
@@ -168,7 +183,15 @@ export default function ProjectsPage() {
                   <div className="flex items-start justify-between mb-3">
                     <Link href={`/admin/projects/${project.id}`} className="hover:underline">
                       <p className="text-sm font-semibold text-zinc-900">{project.name}</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">{clientName}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {clientName}
+                        {(project.location || project.category) && (
+                          <> · {[project.category, project.location].filter(Boolean).join(", ")}</>
+                        )}
+                      </p>
+                      {project.leads?.name && (
+                        <p className="text-[10px] text-zinc-400 mt-0.5">From lead: {project.leads.name}</p>
+                      )}
                     </Link>
                     <div className="flex items-center gap-2">
                       {usingMock ? (
@@ -267,14 +290,25 @@ export default function ProjectsPage() {
               <label className="text-xs font-medium text-zinc-700 mb-1 block">Project Name *</label>
               <Input {...register("name", { required: true })} className="text-sm" placeholder="Banjara Hills Residence" />
             </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-700 mb-1 block">Client</label>
-              <select {...register("client_id")} className="w-full text-sm border border-zinc-200 rounded-md px-3 py-2 bg-white">
-                <option value="">— Unassigned —</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Client</label>
+                <select {...register("client_id")} className="w-full text-sm border border-zinc-200 rounded-md px-3 py-2 bg-white">
+                  <option value="">— Unassigned —</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">From Lead</label>
+                <select {...register("lead_id")} className="w-full text-sm border border-zinc-200 rounded-md px-3 py-2 bg-white">
+                  <option value="">— None —</option>
+                  {leads.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name} · {l.status}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -286,6 +320,16 @@ export default function ProjectsPage() {
               <div>
                 <label className="text-xs font-medium text-zinc-700 mb-1 block">Designer</label>
                 <Input {...register("designer")} className="text-sm" placeholder="Ananya S." />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Location</label>
+                <Input {...register("location")} className="text-sm" placeholder="Kochi" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-700 mb-1 block">Category</label>
+                <Input {...register("category")} className="text-sm" placeholder="Residential" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

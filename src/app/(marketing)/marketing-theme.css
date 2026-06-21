@@ -70,3 +70,9 @@
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
+.marketing-theme .vertical-marquee:hover .animate-marqueeVertical {
+  animation-play-state: paused;
+}
+.marketing-theme .vertical-marquee .testimonial-card:hover {
+  border-color: #bfa054;
+}

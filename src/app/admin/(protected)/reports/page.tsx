@@ -2,20 +2,80 @@ import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { mockProjects, mockLeads } from "@/lib/mock-data";
 import { TrendingUp, Users, FolderKanban, Bot } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
-export default function ReportsPage() {
-  const wonLeads = mockLeads.filter((l) => l.status === "Won").length;
-  const totalLeads = mockLeads.length;
+// Manual-work estimates per agent — used to turn a real task count into an
+// hours-saved / value-saved figure. Not pulled from anywhere: AI run counts are
+// real, but how long the equivalent manual work would take is an estimate.
+const AGENT_ESTIMATES: Record<string, { label: string; hoursPerTask: number }> = {
+  "Discovery Agent": { label: "Priya (Discovery)", hoursPerTask: 2 },
+  "Proposal Agent": { label: "Ravi (Proposals)", hoursPerTask: 4 },
+  "Content Agent": { label: "Neha (Content)", hoursPerTask: 2 },
+  "Update Agent": { label: "Aryan (Updates)", hoursPerTask: 2 },
+  "Testimonial Agent": { label: "Vikram (Testimonials)", hoursPerTask: 1 },
+  "Lead Intake Agent": { label: "Nila (Lead Intake)", hoursPerTask: 0.5 },
+};
+const RATE_PER_HOUR = 2000; // ₹ — used only to express hours saved as a value figure
+
+async function getReportData() {
+  try {
+    const supabase = await createClient();
+    const [leadsRes, projectsRes, runsRes] = await Promise.all([
+      supabase.from("leads").select("id, status, budget"),
+      supabase.from("projects").select("id, status, budget, spent"),
+      supabase.from("ai_task_runs").select("agent, status, created_at"),
+    ]);
+
+    if (leadsRes.error || projectsRes.error || runsRes.error) throw new Error("Supabase error");
+
+    return {
+      source: "live" as const,
+      leads: leadsRes.data || [],
+      projects: projectsRes.data || [],
+      runs: runsRes.data || [],
+    };
+  } catch {
+    return {
+      source: "mock" as const,
+      leads: mockLeads,
+      projects: mockProjects,
+      runs: [] as { agent: string; status: string; created_at: string }[],
+    };
+  }
+}
+
+export default async function ReportsPage() {
+  const { source, leads, projects, runs } = await getReportData();
+
+  const wonLeads = leads.filter((l) => l.status === "Won").length;
+  const totalLeads = leads.length || 1;
   const conversionRate = Math.round((wonLeads / totalLeads) * 100);
 
-  const totalBudget = mockProjects.reduce((s, p) => s + p.budget, 0);
-  const totalSpent = mockProjects.reduce((s, p) => s + p.spent, 0);
+  const totalBudget = projects.reduce((s, p) => s + (p.budget || 0), 0) || 1;
+  const totalSpent = projects.reduce((s, p) => s + (p.spent || 0), 0);
 
-  const completedProjects = mockProjects.filter((p) => p.status === "Completed");
+  const now = new Date();
+  const thisMonthRuns = runs.filter((r) => {
+    const d = new Date(r.created_at);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && r.status === "completed";
+  });
+
+  const byAgent = Object.entries(AGENT_ESTIMATES).map(([agent, { label, hoursPerTask }]) => {
+    const tasks = thisMonthRuns.filter((r) => r.agent === agent).length;
+    const hours = tasks * hoursPerTask;
+    return { name: label, tasks, hours, value: hours * RATE_PER_HOUR };
+  });
+
+  const totalTasks = thisMonthRuns.length;
+  const totalHours = byAgent.reduce((s, a) => s + a.hours, 0);
+  const totalValue = byAgent.reduce((s, a) => s + a.value, 0);
 
   return (
     <div>
-      <Header title="Reports" description="Business performance overview · Q2 2026" />
+      <Header
+        title="Reports"
+        description={`Business performance overview${source === "mock" ? " · showing sample data (Supabase unreachable)" : ""}`}
+      />
 
       <div className="grid grid-cols-2 gap-6 mb-6">
         {/* Lead Conversion */}
@@ -27,7 +87,7 @@ export default function ReportsPage() {
             </div>
             <div className="space-y-3">
               {["New Lead", "Discovery Scheduled", "Proposal Sent", "Won", "Lost"].map((status) => {
-                const count = mockLeads.filter((l) => l.status === status).length;
+                const count = leads.filter((l) => l.status === status).length;
                 const pct = Math.round((count / totalLeads) * 100);
                 return (
                   <div key={status}>
@@ -91,8 +151,8 @@ export default function ReportsPage() {
           </div>
           <div className="grid grid-cols-5 gap-4">
             {["Discovery", "Design", "Approval", "Execution", "Completed"].map((status) => {
-              const count = mockProjects.filter((p) => p.status === status).length;
-              const budget = mockProjects.filter((p) => p.status === status).reduce((s, p) => s + p.budget, 0);
+              const count = projects.filter((p) => p.status === status).length;
+              const budget = projects.filter((p) => p.status === status).reduce((s, p) => s + (p.budget || 0), 0);
               return (
                 <div key={status} className="text-center">
                   <p className="text-2xl font-bold text-zinc-900">{count}</p>
@@ -111,31 +171,35 @@ export default function ReportsPage() {
           <div className="flex items-center gap-2 mb-4">
             <Bot className="w-4 h-4 text-zinc-500" />
             <h3 className="text-sm font-semibold text-zinc-900">AI Employee Impact</h3>
+            <span className="ml-auto text-[10px] text-zinc-400">This month · hours/value are estimates</span>
           </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { name: "Priya (Discovery)", tasks: 18, hours: 36, value: "₹72,000" },
-              { name: "Ravi (Proposals)", tasks: 12, hours: 48, value: "₹96,000" },
-              { name: "Neha (Content)", tasks: 9, hours: 18, value: "₹36,000" },
-              { name: "Aryan (Updates)", tasks: 8, hours: 16, value: "₹32,000" },
-            ].map((emp) => (
-              <div key={emp.name} className="bg-zinc-50 rounded-lg p-3">
-                <p className="text-xs font-medium text-zinc-900 mb-2">{emp.name}</p>
-                <p className="text-xl font-bold text-zinc-900">{emp.tasks}</p>
-                <p className="text-[10px] text-zinc-400">tasks</p>
-                <p className="text-xs font-medium text-zinc-700 mt-1">{emp.hours}h saved</p>
-                <p className="text-[10px] text-zinc-400">≈ {emp.value} value</p>
+          {totalTasks === 0 ? (
+            <p className="text-xs text-zinc-400 text-center py-6">No AI agent runs logged yet this month</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 gap-4">
+                {byAgent
+                  .filter((a) => a.tasks > 0)
+                  .map((emp) => (
+                    <div key={emp.name} className="bg-zinc-50 rounded-lg p-3">
+                      <p className="text-xs font-medium text-zinc-900 mb-2">{emp.name}</p>
+                      <p className="text-xl font-bold text-zinc-900">{emp.tasks}</p>
+                      <p className="text-[10px] text-zinc-400">tasks</p>
+                      <p className="text-xs font-medium text-zinc-700 mt-1">{emp.hours}h saved</p>
+                      <p className="text-[10px] text-zinc-400">≈ ₹{emp.value.toLocaleString("en-IN")} value</p>
+                    </div>
+                  ))}
               </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
-            <p className="text-xs text-zinc-500">Total this month</p>
-            <div className="flex items-center gap-4 text-xs">
-              <span><span className="font-semibold text-zinc-900">47</span> tasks</span>
-              <span><span className="font-semibold text-zinc-900">118h</span> saved</span>
-              <span><span className="font-semibold text-zinc-900">₹2.36L</span> value</span>
-            </div>
-          </div>
+              <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
+                <p className="text-xs text-zinc-500">Total this month</p>
+                <div className="flex items-center gap-4 text-xs">
+                  <span><span className="font-semibold text-zinc-900">{totalTasks}</span> tasks</span>
+                  <span><span className="font-semibold text-zinc-900">{totalHours}h</span> saved</span>
+                  <span><span className="font-semibold text-zinc-900">₹{(totalValue / 100000).toFixed(2)}L</span> value</span>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

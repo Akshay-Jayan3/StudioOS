@@ -1,9 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { leadIntakeSystemPrompt } from "@/agents/lead-intake-agent/system-prompt";
+import { buildLeadIntakeSystemPrompt } from "@/agents/lead-intake-agent/system-prompt";
 import { chatRequestSchema, leadExtractionSchema } from "@/agents/lead-intake-agent/schema";
 import { logAIRun } from "@/lib/log-ai-run";
+import { getSiteSettings } from "@/lib/site-settings";
 
 function getServiceClient() {
   return createClient(
@@ -30,6 +31,8 @@ export async function POST(req: NextRequest) {
     const existingLeadId: string | undefined = body.leadId || undefined;
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+    const settings = await getSiteSettings();
+    const leadIntakeSystemPrompt = buildLeadIntakeSystemPrompt(settings.studio_name);
 
     // 1. Conversational reply
     const priorMessages = messages.slice(0, -1);

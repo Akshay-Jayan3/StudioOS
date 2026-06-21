@@ -3,13 +3,20 @@ import AboutImage from "@/components/marketing/about/AboutImage";
 import StatCard from "@/components/marketing/ui/StatCard";
 import GoldButton from "@/components/marketing/ui/GoldButton";
 import Link from "next/link";
+import { getSiteSettings } from "@/lib/site-settings";
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: "About — Nilaya Interiors",
-  description: "Kerala-based interior design studio creating refined residential and commercial spaces.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  return {
+    title: `About — ${settings.studio_name}`,
+    description: "Kerala-based interior design studio creating refined residential and commercial spaces.",
+  };
+}
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const settings = await getSiteSettings();
+
   return (
     <div className="pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-6">
@@ -18,7 +25,7 @@ export default function AboutPage() {
           Designing spaces that feel like they were always meant to be.
         </h1>
         <p className="mt-8 text-white/50 max-w-2xl leading-relaxed">
-          Nilaya is a Kerala-based interior design studio working across residential and commercial
+          {settings.studio_name} is a Kerala-based interior design studio working across residential and commercial
           projects. We believe good design isn't about following trends — it's about understanding
           how a space will actually be lived in, then building every decision around that.
         </p>
@@ -31,7 +38,7 @@ export default function AboutPage() {
       <Section label="Our Story" title="Where it began">
         <div className="grid md:grid-cols-2 gap-12">
           <p className="text-white/50 leading-relaxed">
-            Nilaya started with a simple frustration: too many interior projects in Kerala were
+            {settings.studio_name} started with a simple frustration: too many interior projects in Kerala were
             either generic catalogue work or wildly over-designed showpieces that didn't suit how
             families actually live. We set out to build something in between — design that's
             considered, warm, and built around real life.
